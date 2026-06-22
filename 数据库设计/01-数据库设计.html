@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库设计 - 大学录取信息整理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; }
+        .section h2 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px; }
+        .section h3 { color: #1557b0; margin: 25px 0 15px; font-size: 20px; }
+        .content p { line-height: 2; color: #333; margin-bottom: 15px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 5px solid #1a73e8; }
+        .card h4 { color: #1a73e8; margin-bottom: 10px; }
+        .highlight { background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; margin: 20px 0; }
+        .info-box { background: #e8f0fe; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        ul { margin-left: 30px; line-height: 2; color: #333; }
+        li { margin-bottom: 10px; }
+        .footer { background: #f8f9fa; padding: 30px 40px; text-align: center; border-top: 1px solid #e0e0e0; }
+        .footer p { color: #666; font-size: 14px; margin: 5px 0; }
+        .meta-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .meta-info p { margin: 5px 15px; color: #666; font-size: 14px; }
+        .tag { display: inline-block; background: #1a73e8; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #1a73e8; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .field-required { color: #dc3545; font-weight: bold; }
+        .field-optional { color: #6c757d; }
+        .code-block { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 10px; overflow-x: auto; margin: 20px 0; font-family: 'Consolas', monospace; font-size: 13px; }
+        .er-diagram { background: #f8f9fa; padding: 30px; border-radius: 10px; margin: 20px 0; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💾 数据库设计</h1>
+            <p>大学录取信息整理系统</p>
+        </div>
+
+        <div class="content">
+            <div class="meta-info">
+                <p><strong>文档类型：</strong> <span class="tag">数据库设计</span></p>
+                <p><strong>数据库：</strong> MySQL 8.0+</p>
+                <p><strong>字符集：</strong> utf8mb4</p>
+                <p><strong>创建时间：</strong> 2026 年 3 月 18 日</p>
+            </div>
+
+            <div class="section">
+                <h2>1. 数据库概述</h2>
+                <div class="info-box">
+                    <p><strong>数据库名：</strong> admission_system</p>
+                    <p><strong>表数量：</strong> 7 张主表 + 3 张辅助表</p>
+                    <p><strong>设计原则：</strong> 第三范式、索引优化、扩展性考虑</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2. 核心表设计</h2>
+                
+                <h3>2.1 录取记录表 (admission_records)</h3>
+                <div class="card">
+                    <h4>表说明</h4>
+                    <p>存储所有录取记录的核心表，包含学生、大学、专业、奖学金等完整信息。</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>字段名</th>
+                            <th>类型</th>
+                            <th>必填</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>id</td><td>BIGINT</td><td class="field-required">PK</td><td>主键 ID</td></tr>
+                        <tr><td>student_name_cn</td><td>VARCHAR(100)</td><td class="field-required">✅</td><td>学生姓名（中文）</td></tr>
+                        <tr><td>student_name_en</td><td>VARCHAR(100)</td><td class="field-optional">❌</td><td>学生姓名（英文）</td></tr>
+                        <tr><td>student_grade</td><td>VARCHAR(20)</td><td class="field-optional">❌</td><td>学生年级</td></tr>
+                        <tr><td>country</td><td>VARCHAR(50)</td><td class="field-required">✅</td><td>国家/地区</td></tr>
+                        <tr><td>country_en</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>国家/地区（英文）</td></tr>
+                        <tr><td>university_cn</td><td>VARCHAR(200)</td><td class="field-required">✅</td><td>大学名称（中文）</td></tr>
+                        <tr><td>university_en</td><td>VARCHAR(200)</td><td class="field-optional">❌</td><td>大学名称（英文）</td></tr>
+                        <tr><td>university_type</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>大学类型</td></tr>
+                        <tr><td>university_ranking</td><td>INT</td><td class="field-optional">❌</td><td>大学排名</td></tr>
+                        <tr><td>major_cn</td><td>VARCHAR(200)</td><td class="field-optional">❌</td><td>专业名称（中文）</td></tr>
+                        <tr><td>major_en</td><td>VARCHAR(200)</td><td class="field-optional">❌</td><td>专业名称（英文）</td></tr>
+                        <tr><td>major_category</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>专业类别</td></tr>
+                        <tr><td>admission_type</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>录取类型</td></tr>
+                        <tr><td>admission_status</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>录取状态</td></tr>
+                        <tr><td>conditional_offer</td><td>TINYINT</td><td class="field-optional">❌</td><td>是否条件录取</td></tr>
+                        <tr><td>admission_date</td><td>DATE</td><td class="field-optional">❌</td><td>录取日期</td></tr>
+                        <tr><td>admission_year</td><td>INT</td><td class="field-required">✅</td><td>录取年份</td></tr>
+                        <tr><td>language_requirement_type</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>语言考试类型</td></tr>
+                        <tr><td>language_score_required</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>语言分数要求</td></tr>
+                        <tr><td>language_score_actual</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>实际语言分数</td></tr>
+                        <tr><td>language_waived</td><td>TINYINT</td><td class="field-optional">❌</td><td>是否豁免语言</td></tr>
+                        <tr><td>sat_required</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>SAT 要求</td></tr>
+                        <tr><td>sat_actual</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>实际 SAT 成绩</td></tr>
+                        <tr><td>test_optional</td><td>TINYINT</td><td class="field-optional">❌</td><td>是否标化可选</td></tr>
+                        <tr><td>scholarship_amount</td><td>DECIMAL(10,2)</td><td class="field-optional">❌</td><td>奖学金金额</td></tr>
+                        <tr><td>scholarship_currency</td><td>VARCHAR(10)</td><td class="field-optional">❌</td><td>货币单位</td></tr>
+                        <tr><td>scholarship_type</td><td>VARCHAR(50)</td><td class="field-optional">❌</td><td>奖学金类型</td></tr>
+                        <tr><td>source_school</td><td>VARCHAR(200)</td><td class="field-required">✅</td><td>来源学校</td></tr>
+                        <tr><td>article_url</td><td>VARCHAR(500)</td><td class="field-required">✅</td><td>文章链接</td></tr>
+                        <tr><td>article_title</td><td>VARCHAR(300)</td><td class="field-optional">❌</td><td>文章标题</td></tr>
+                        <tr><td>publish_date</td><td>DATE</td><td class="field-optional">❌</td><td>文章发布日期</td></tr>
+                        <tr><td>created_at</td><td>DATETIME</td><td class="field-required">✅</td><td>创建时间</td></tr>
+                        <tr><td>updated_at</td><td>DATETIME</td><td class="field-required">✅</td><td>更新时间</td></tr>
+                        <tr><td>status</td><td>TINYINT</td><td class="field-optional">❌</td><td>状态</td></tr>
+                        <tr><td>data_quality</td><td>TINYINT</td><td class="field-optional">❌</td><td>数据质量评分</td></tr>
+                        <tr><td>notes</td><td>TEXT</td><td class="field-optional">❌</td><td>备注</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>2.2 采集任务队列表 (collection_tasks)</h3>
+                <div class="card">
+                    <h4>表说明</h4>
+                    <p>管理采集任务队列，支持任务调度、状态追踪、重试机制。</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>字段名</th>
+                            <th>类型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>id</td><td>BIGINT</td><td>主键 ID</td></tr>
+                        <tr><td>article_url</td><td>VARCHAR(500)</td><td>文章链接</td></tr>
+                        <tr><td>source_school_id</td><td>INT</td><td>来源学校 ID</td></tr>
+                        <tr><td>source_school_name</td><td>VARCHAR(200)</td><td>来源学校名称</td></tr>
+                        <tr><td>priority</td><td>TINYINT</td><td>优先级 (1-10)</td></tr>
+                        <tr><td>task_status</td><td>TINYINT</td><td>状态 (0:待处理 1:处理中 2:完成 3:失败)</td></tr>
+                        <tr><td>retry_count</td><td>TINYINT</td><td>重试次数</td></tr>
+                        <tr><td>max_retry</td><td>TINYINT</td><td>最大重试次数</td></tr>
+                        <tr><td>extracted_count</td><td>INT</td><td>提取记录数</td></tr>
+                        <tr><td>error_message</td><td>TEXT</td><td>错误信息</td></tr>
+                        <tr><td>scheduled_at</td><td>DATETIME</td><td>计划执行时间</td></tr>
+                        <tr><td>started_at</td><td>DATETIME</td><td>开始时间</td></tr>
+                        <tr><td>completed_at</td><td>DATETIME</td><td>完成时间</td></tr>
+                        <tr><td>processor</td><td>VARCHAR(50)</td><td>处理者</td></tr>
+                        <tr><td>created_at</td><td>DATETIME</td><td>创建时间</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>2.3 国家/地区表 (countries)</h3>
+                <table>
+                    <thead>
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>id</td><td>INT</td><td>主键 ID</td></tr>
+                        <tr><td>name_cn</td><td>VARCHAR(50)</td><td>中文名称</td></tr>
+                        <tr><td>name_en</td><td>VARCHAR(50)</td><td>英文名称</td></tr>
+                        <tr><td>continent</td><td>VARCHAR(50)</td><td>所属洲</td></tr>
+                        <tr><td>region</td><td>VARCHAR(50)</td><td>地区</td></tr>
+                        <tr><td>currency</td><td>VARCHAR(10)</td><td>货币</td></tr>
+                        <tr><td>is_popular</td><td>TINYINT</td><td>是否热门留学国家</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>2.4 大学信息表 (universities)</h3>
+                <table>
+                    <thead>
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>id</td><td>INT</td><td>主键 ID</td></tr>
+                        <tr><td>name_cn</td><td>VARCHAR(200)</td><td>中文名称</td></tr>
+                        <tr><td>name_en</td><td>VARCHAR(200)</td><td>英文名称</td></tr>
+                        <tr><td>country</td><td>VARCHAR(50)</td><td>国家/地区</td></tr>
+                        <tr><td>type</td><td>VARCHAR(50)</td><td>大学类型</td></tr>
+                        <tr><td>ranking_us_news</td><td>INT</td><td>US News 排名</td></tr>
+                        <tr><td>ranking_qs</td><td>INT</td><td>QS 排名</td></tr>
+                        <tr><td>is_target</td><td>TINYINT</td><td>是否目标大学</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>2.5 录取条件详情表 (admission_requirements)</h3>
+                <table>
+                    <thead>
+                        <tr><th>字段名</th><th>类型</th><th>说明</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>id</td><td>BIGINT</td><td>主键 ID</td></tr>
+                        <tr><td>record_id</td><td>BIGINT</td><td>关联录取记录 ID</td></tr>
+                        <tr><td>gpa_required</td><td>VARCHAR(50)</td><td>GPA 要求</td></tr>
+                        <tr><td>toefl_total</td><td>INT</td><td>托福总分要求</td></tr>
+                        <tr><td>ielts_total</td><td>DECIMAL(3,1)</td><td>雅思总分要求</td></tr>
+                        <tr><td>sat_total</td><td>INT</td><td>SAT 总分要求</td></tr>
+                        <tr><td>act_total</td><td>INT</td><td>ACT 总分要求</td></tr>
+                        <tr><td>essay_required</td><td>TINYINT</td><td>是否需要文书</td></tr>
+                        <tr><td>portfolio_required</td><td>TINYINT</td><td>是否需要作品集</td></tr>
+                        <tr><td>interview_required</td><td>TINYINT</td><td>是否需要面试</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>3. 索引设计</h2>
+                <div class="info-box">
+                    <p><strong>设计原则：</strong> 覆盖常用查询场景，避免过度索引</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>索引字段</th>
+                            <th>索引类型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>admission_records</td>
+                            <td>student_name_cn</td>
+                            <td>普通索引</td>
+                            <td>按学生姓名查询</td>
+                        </tr>
+                        <tr>
+                            <td>admission_records</td>
+                            <td>country, university_cn</td>
+                            <td>普通索引</td>
+                            <td>按国家/大学查询</td>
+                        </tr>
+                        <tr>
+                            <td>admission_records</td>
+                            <td>admission_year</td>
+                            <td>普通索引</td>
+                            <td>按年份统计</td>
+                        </tr>
+                        <tr>
+                            <td>admission_records</td>
+                            <td>country, admission_year</td>
+                            <td>复合索引</td>
+                            <td>按国家 + 年份统计</td>
+                        </tr>
+                        <tr>
+                            <td>collection_tasks</td>
+                            <td>task_status, priority</td>
+                            <td>复合索引</td>
+                            <td>任务调度查询</td>
+                        </tr>
+                        <tr>
+                            <td>collection_tasks</td>
+                            <td>created_at</td>
+                            <td>普通索引</td>
+                            <td>按时间排序</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>4. 数据初始化</h2>
+                <div class="code-block">
+-- 初始化国家数据
+INSERT INTO countries (name_cn, name_en, continent, is_popular) VALUES
+('美国', 'United States', '北美洲', 1),
+('英国', 'United Kingdom', '欧洲', 1),
+('加拿大', 'Canada', '北美洲', 1),
+('澳大利亚', 'Australia', '大洋洲', 1),
+('中国香港', 'Hong Kong', '亚洲', 1),
+('新加坡', 'Singapore', '亚洲', 1),
+('德国', 'Germany', '欧洲', 0),
+('法国', 'France', '欧洲', 0);
+
+-- 初始化目标大学
+INSERT INTO universities (name_cn, name_en, country, is_target) VALUES
+('哈佛大学', 'Harvard University', '美国', 1),
+('斯坦福大学', 'Stanford University', '美国', 1),
+('剑桥大学', 'University of Cambridge', '英国', 1),
+('牛津大学', 'University of Oxford', '英国', 1),
+('多伦多大学', 'University of Toronto', '加拿大', 1);
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>5. 视图和存储过程</h2>
+                <div class="card">
+                    <h4>录取记录完整视图</h4>
+                    <div class="code-block">
+CREATE VIEW v_admission_records_full AS
+SELECT 
+    ar.*,
+    u.type AS university_type,
+    u.ranking_us_news,
+    ss.city AS school_city
+FROM admission_records ar
+LEFT JOIN universities u ON ar.university_cn = u.name_cn
+LEFT JOIN source_schools ss ON ar.source_school = ss.school_name;
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>文档版本：</strong> v1.0</p>
+            <p><strong>创建时间：</strong> 2026 年 3 月 18 日</p>
+            <p><strong>文档路径：</strong> 大学录取信息整理系统/数据库设计/01-数据库设计.html</p>
+        </div>
+    </div>
+</body>
+</html>

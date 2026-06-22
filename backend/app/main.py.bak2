@@ -1,0 +1,2090 @@
+# 完成时间：2026-03-19 02:45 UTC - 任务队列管理界面已完成
+"""
+大学录取信息整理系统 - FastAPI 主应用
+单端口部署方案：前后端合并，FastAPI 服务静态文件和 API
+"""
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Depends
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import sqlite3
+import io
+import time
+from datetime import datetime, timedelta
+from typing import Dict, Any, List
+import pandas as pd
+from openpyxl import load_workbook
+import json
+
+# 导入管理后台页面
+from app.admin_page import HTML_CONTENT as ADMIN_HTML
+
+# 导入 PDF 模板
+from app.pdf_template import create_pdf_report
+
+# 导入监控模块（Agent-11 新增）
+from app.monitor import monitor_service
+
+# 导入用户认证模块（Agent-10 新增）
+from app.auth import (
+    authenticate_user, create_access_token, get_current_user, has_permission,
+    create_user, get_all_users, get_all_roles, update_user_role, deactivate_user,
+    activate_user, get_user_by_username, update_last_login
+)
+from pydantic import BaseModel
+
+# 数据目录
+DATA_DIR = os.path.join(os.path.dirname(__file__), "../data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# 创建 FastAPI 应用
+app = FastAPI(title="大学录取信息整理系统", version="1.0.0")
+
+# CORS
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+# API 响应时间监控中间件（Agent-11 新增）
+@app.middleware("http")
+async def monitor_api_latency(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    # 记录 API 响应时间（只记录/api/开头的接口）
+    if request.url.path.startswith("/api/"):
+        monitor_service.record_api_latency(
+            endpoint=request.url.path,
+            method=request.method,
+            latency_sec=process_time,
+            status_code=response.status_code
+        )
+    
+    return response
+
+def get_db_connection():
+    db_path = "/root/.openclaw/workspace/大学录取信息整理系统/data/admission_system.db"
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查表是否已存在
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='admission_records'")
+    table_exists = cursor.fetchone() is not None
+    
+    if not table_exists:
+        # 创建新表（完整结构）
+        cursor.execute('''CREATE TABLE admission_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_name TEXT NOT NULL,
+            student_name_en TEXT,
+            source_school_id INTEGER,
+            university_id INTEGER,
+            country_id INTEGER,
+            major TEXT,
+            major_en TEXT,
+            degree TEXT,
+            scholarship TEXT,
+            scholarship_amount REAL,
+            gpa REAL,
+            toefl INTEGER,
+            ielts REAL,
+            sat INTEGER,
+            act INTEGER,
+            gre INTEGER,
+            gmat INTEGER,
+            application_year INTEGER,
+            admission_year INTEGER,
+            article_url TEXT,
+            article_title TEXT,
+            requirements TEXT,
+            portfolio TEXT,
+            is_verified INTEGER DEFAULT 0,
+            data_completeness INTEGER DEFAULT 3,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # 创建索引
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_admission_source ON admission_records(source_school_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_admission_university ON admission_records(university_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_admission_country ON admission_records(country_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_admission_year ON admission_records(admission_year)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_admission_verified ON admission_records(is_verified)')
+    
+    # 确保其他表存在
+    cursor.execute('''CREATE TABLE IF NOT EXISTS source_schools (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        city TEXT,
+        province TEXT,
+        contact_person TEXT,
+        contact_phone TEXT,
+        official_account TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS universities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        name_en TEXT,
+        country_id INTEGER,
+        ranking_world INTEGER,
+        ranking_national INTEGER,
+        university_type TEXT,
+        is_target INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS countries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        name_en TEXT,
+        continent TEXT,
+        region TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        progress INTEGER DEFAULT 0,
+        result TEXT,
+        error_message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP
+    )''')
+    
+    # 创建采集任务队列表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS collection_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        title TEXT,
+        source TEXT,
+        priority INTEGER DEFAULT 5,
+        status TEXT DEFAULT 'pending',
+        retry_count INTEGER DEFAULT 0,
+        error_message TEXT,
+        records_extracted INTEGER DEFAULT 0,
+        progress INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_by TEXT
+    )''')
+    
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_status ON collection_tasks(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_priority ON collection_tasks(priority)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_created ON collection_tasks(created_at)')
+    
+    conn.commit()
+    conn.close()
+
+# 初始化数据库
+init_db()
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """管理后台首页"""
+    return ADMIN_HTML
+
+
+@app.get("/api/records")
+async def get_records(page: int = 1, page_size: int = 50):
+    """简化版 API - 直接查询所有记录"""
+    import sqlite3
+    conn = sqlite3.connect('/root/.openclaw/workspace/大学录取信息整理系统/data/admission_system.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM admission_records ORDER BY created_at DESC LIMIT ? OFFSET ?", [page_size, (page - 1) * page_size])
+    rows = cursor.fetchall()
+    
+    cursor.execute("SELECT COUNT(*) FROM admission_records")
+    total = cursor.fetchone()[0]
+    conn.close()
+    
+    records = [dict(row) for row in rows]
+    return {"records": records, "total": total, "page": page, "page_size": page_size, "total_pages": (total + page_size - 1) // page_size}
+
+@app.get("/api/health")
+async def health_check():
+    """健康检查 API（基础版）"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/monitor/health")
+async def monitor_health():
+    """
+    系统健康监控 API（Agent-11 新增）
+    返回详细的系统健康状态，包括 API、数据库、磁盘、任务队列状态
+    """
+    health = monitor_service.get_health_status()
+    return {
+        "status": health.status,
+        "timestamp": health.timestamp,
+        "api_status": health.api_status,
+        "database_status": health.database_status,
+        "disk_status": health.disk_status,
+        "task_queue_status": health.task_queue_status,
+        "active_alerts": health.active_alerts,
+        "metrics": health.metrics
+    }
+
+@app.get("/api/monitor/metrics")
+async def get_system_metrics():
+    """获取系统性能指标（CPU、内存、磁盘、网络）"""
+    metrics = monitor_service.get_system_metrics()
+    if metrics:
+        return {
+            "timestamp": metrics.timestamp,
+            "cpu_percent": metrics.cpu_percent,
+            "memory_percent": metrics.memory_percent,
+            "memory_used_gb": metrics.memory_used_gb,
+            "memory_total_gb": metrics.memory_total_gb,
+            "disk_percent": metrics.disk_percent,
+            "disk_used_gb": metrics.disk_used_gb,
+            "disk_total_gb": metrics.disk_total_gb,
+            "network_sent_mb": metrics.network_sent_mb,
+            "network_recv_mb": metrics.network_recv_mb
+        }
+    return {"error": "无法获取系统指标"}
+
+@app.get("/api/monitor/task-status")
+async def get_task_queue_status():
+    """获取任务队列状态"""
+    return monitor_service.get_task_queue_status()
+
+@app.get("/api/monitor/api-latency")
+async def get_api_latency_stats():
+    """获取 API 响应时间统计"""
+    return monitor_service.get_api_latency_stats()
+
+@app.get("/api/monitor/alerts")
+async def get_alerts(limit: int = 20):
+    """获取最近的告警记录"""
+    return {"alerts": monitor_service.get_recent_alerts(limit)}
+
+@app.get("/api/monitor/alert-config")
+async def get_alert_config():
+    """获取告警配置"""
+    return monitor_service.get_alert_config()
+
+@app.post("/api/monitor/alert-config")
+async def update_alert_config(config: Dict[str, Any]):
+    """更新告警配置"""
+    monitor_service.update_alert_config(config)
+    return {"message": "告警配置已更新", "config": monitor_service.get_alert_config()}
+
+@app.get("/api/monitor/history")
+async def get_metrics_history(hours: int = 24):
+    """获取历史性能指标"""
+    return {"metrics": monitor_service.get_metrics_history(hours)}
+
+@app.get("/api/monitor/database-health")
+async def get_database_health():
+    """获取数据库健康状态"""
+    return monitor_service.check_database_health()
+
+
+# ==================== 用户认证 API（Agent-10 新增） ====================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    email: str = None
+    full_name: str = None
+    role_id: int = 3
+
+
+class UserUpdateRequest(BaseModel):
+    role_id: int = None
+    is_active: bool = None
+
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """用户登录"""
+    user = authenticate_user(request.username, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    
+    # 创建 access token
+    access_token = create_access_token(data={"sub": str(user["id"]), "username": user["username"], "role": user["role_name"]})
+    
+    # 更新最后登录时间
+    update_last_login(user["id"])
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "email": user["email"],
+            "role_name": user["role_name"],
+            "role_id": user["role_id"]
+        }
+    }
+
+
+@app.get("/api/auth/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """获取当前用户信息"""
+    return {
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "full_name": current_user["full_name"],
+        "email": current_user["email"],
+        "role_name": current_user["role_name"],
+        "role_id": current_user["role_id"],
+        "permissions": current_user["permissions"]
+    }
+
+
+@app.post("/api/auth/register")
+async def register(request: UserCreateRequest, current_user: dict = Depends(get_current_user)):
+    """注册用户（需要管理员权限）"""
+    if not has_permission(current_user, "manage_users"):
+        raise HTTPException(status_code=403, detail="权限不足，无法注册用户")
+    
+    new_user = create_user(
+        username=request.username,
+        password=request.password,
+        email=request.email,
+        full_name=request.full_name,
+        role_id=request.role_id
+    )
+    
+    return {"message": "用户创建成功", "user": new_user}
+
+
+@app.get("/api/users")
+async def list_users(current_user: dict = Depends(get_current_user)):
+    """获取用户列表（需要管理员权限）"""
+    if not has_permission(current_user, "manage_users"):
+        raise HTTPException(status_code=403, detail="权限不足，无法查看用户列表")
+    
+    users = get_all_users()
+    return {"users": users, "total": len(users)}
+
+
+@app.get("/api/roles")
+async def list_roles(current_user: dict = Depends(get_current_user)):
+    """获取角色列表"""
+    roles = get_all_roles()
+    return {"roles": roles, "total": len(roles)}
+
+
+@app.put("/api/users/{user_id}")
+async def update_user(user_id: int, request: UserUpdateRequest, current_user: dict = Depends(get_current_user)):
+    """更新用户信息（需要管理员权限）"""
+    if not has_permission(current_user, "manage_users"):
+        raise HTTPException(status_code=403, detail="权限不足，无法更新用户")
+    
+    if request.role_id is not None:
+        update_user_role(user_id, request.role_id)
+    
+    if request.is_active is not None:
+        if request.is_active:
+            activate_user(user_id)
+        else:
+            deactivate_user(user_id)
+    
+    updated_user = get_user_by_username(str(user_id))
+    return {"message": "用户更新成功", "user": updated_user}
+
+
+@app.post("/api/users/{user_id}/deactivate")
+async def deactivate_user_endpoint(user_id: int, current_user: dict = Depends(get_current_user)):
+    """停用用户（需要管理员权限）"""
+    if not has_permission(current_user, "manage_users"):
+        raise HTTPException(status_code=403, detail="权限不足，无法停用用户")
+    
+    if deactivate_user(user_id):
+        return {"message": "用户已停用"}
+    raise HTTPException(status_code=404, detail="用户不存在")
+
+
+@app.post("/api/users/{user_id}/activate")
+async def activate_user_endpoint(user_id: int, current_user: dict = Depends(get_current_user)):
+    """激活用户（需要管理员权限）"""
+    if not has_permission(current_user, "manage_users"):
+        raise HTTPException(status_code=403, detail="权限不足，无法激活用户")
+    
+    if activate_user(user_id):
+        return {"message": "用户已激活"}
+    raise HTTPException(status_code=404, detail="用户不存在")
+
+
+# ==================== 原有 API 继续 ====================
+
+
+@app.post("/api/records")
+async def create_record(record: Dict[str, Any]):
+    required = ["student_name", "student_id", "university", "major"]
+    for field in required:
+        if field not in record:
+            raise HTTPException(status_code=400, detail=f"缺少必需字段：{field}")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''INSERT INTO admission_records (student_name, student_id, university, major, admission_type, score, province, year, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            [record.get("student_name"), record.get("student_id"), record.get("university"), record.get("major"),
+             record.get("admission_type"), record.get("score"), record.get("province"), record.get("year"),
+             record.get("status", "pending"), record.get("notes")])
+        conn.commit()
+        record_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM admission_records WHERE id = ?", [record_id])
+        new_record = dict(cursor.fetchone())
+        conn.close()
+        return {"message": "记录创建成功", "record": new_record}
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"学号已存在：{record.get('student_id')}")
+
+@app.get("/api/records/{record_id}")
+async def get_record(record_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM admission_records WHERE id = ?", [record_id])
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return dict(row)
+
+@app.put("/api/records/{record_id}")
+async def update_record(record_id: int, record: Dict[str, Any]):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM admission_records WHERE id = ?", [record_id])
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="记录不存在")
+    update_fields = []
+    values = []
+    allowed = ["student_name", "student_id", "university", "major", "admission_type", "score", "province", "year", "status", "notes"]
+    for field in allowed:
+        if field in record:
+            update_fields.append(f"{field} = ?")
+            values.append(record[field])
+    if not update_fields:
+        conn.close()
+        raise HTTPException(status_code=400, detail="没有可更新的字段")
+    values.append(record_id)
+    query = f"UPDATE admission_records SET {', '.join(update_fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    try:
+        cursor.execute(query, values)
+        conn.commit()
+        cursor.execute("SELECT * FROM admission_records WHERE id = ?", [record_id])
+        updated_record = dict(cursor.fetchone())
+        conn.close()
+        return {"message": "记录更新成功", "record": updated_record}
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/records/{record_id}")
+async def delete_record(record_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM admission_records WHERE id = ?", [record_id])
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="记录不存在")
+    cursor.execute("DELETE FROM admission_records WHERE id = ?", [record_id])
+    conn.commit()
+    conn.close()
+    return {"message": "记录删除成功"}
+
+
+# ==================== 批量操作 API（Agent-13 新增） ====================
+
+@app.put("/api/records/batch")
+async def batch_update_records(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    批量修改录取记录字段
+    
+    请求格式：
+    {
+        "record_ids": [1, 2, 3, ...],
+        "fields": {
+            "country_id": 1,
+            "university_id": 5,
+            "major": "Computer Science",
+            "status": "verified",
+            "is_verified": 1,
+            "degree": "本科",
+            "scholarship": "Merit",
+            "scholarship_amount": 5000
+        }
+    }
+    
+    支持批量修改的字段：
+    - country_id: 国家 ID
+    - university_id: 大学 ID
+    - major: 专业
+    - major_en: 专业英文
+    - degree: 学位
+    - scholarship: 奖学金
+    - scholarship_amount: 奖学金金额
+    - is_verified: 验证状态
+    - status: 状态文本
+    - requirements: 录取条件
+    - portfolio: 作品集
+    - article_url: 文章链接
+    """
+    data = await request.json()
+    record_ids = data.get("record_ids", [])
+    fields = data.get("fields", {})
+    
+    if not record_ids:
+        raise HTTPException(status_code=400, detail="请提供要修改的记录 ID 列表")
+    
+    if not fields:
+        raise HTTPException(status_code=400, detail="请提供要修改的字段")
+    
+    # 允许批量修改的字段
+    allowed_fields = [
+        "country_id", "university_id", "major", "major_en", "degree",
+        "scholarship", "scholarship_amount", "is_verified", "status",
+        "requirements", "portfolio", "article_url", "article_title",
+        "source_school_id", "gpa", "toefl", "ielts", "sat", "act", "gre", "gmat"
+    ]
+    
+    # 过滤只保留允许的字段
+    update_fields = {k: v for k, v in fields.items() if k in allowed_fields}
+    
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="没有可更新的字段")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 备份原始数据（用于撤销）
+        placeholders = ','.join('?' * len(record_ids))
+        cursor.execute(f"SELECT * FROM admission_records WHERE id IN ({placeholders})", record_ids)
+        original_records = [dict(row) for row in cursor.fetchall()]
+        
+        if not original_records:
+            conn.close()
+            raise HTTPException(status_code=404, detail="未找到任何记录")
+        
+        # 2. 创建撤销记录
+        import json
+        undo_data = {
+            "operation": "batch_update",
+            "record_ids": record_ids,
+            "original_data": original_records,
+            "updated_fields": update_fields,
+            "timestamp": datetime.now().isoformat(),
+            "user_id": current_user.get("id")
+        }
+        
+        cursor.execute("""
+            INSERT INTO batch_operations (operation_type, operation_data, created_by, created_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, ["batch_update", json.dumps(undo_data, ensure_ascii=False), current_user.get("id")])
+        operation_id = cursor.lastrowid
+        
+        # 3. 构建更新 SQL
+        update_clauses = []
+        values = []
+        for field, value in update_fields.items():
+            update_clauses.append(f"{field} = ?")
+            values.append(value)
+        update_clauses.append("updated_at = CURRENT_TIMESTAMP")
+        
+        # 4. 执行批量更新
+        values.extend(record_ids)
+        query = f"UPDATE admission_records SET {', '.join(update_clauses)} WHERE id IN ({placeholders})"
+        cursor.execute(query, values)
+        updated_count = cursor.rowcount
+        
+        conn.commit()
+        
+        # 5. 返回结果
+        return {
+            "message": "批量更新成功",
+            "updated_count": updated_count,
+            "operation_id": operation_id,
+            "can_undo": True
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"批量更新失败：{str(e)}")
+
+
+@app.delete("/api/records/batch")
+async def batch_delete_records(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    批量删除录取记录
+    
+    请求格式：
+    {
+        "record_ids": [1, 2, 3, ...],
+        "confirm": true  // 需要确认标志
+    }
+    """
+    data = await request.json()
+    record_ids = data.get("record_ids", [])
+    confirm = data.get("confirm", False)
+    
+    if not record_ids:
+        raise HTTPException(status_code=400, detail="请提供要删除的记录 ID 列表")
+    
+    if not confirm:
+        raise HTTPException(status_code=400, detail="需要确认删除操作")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 备份原始数据（用于撤销）
+        placeholders = ','.join('?' * len(record_ids))
+        cursor.execute(f"SELECT * FROM admission_records WHERE id IN ({placeholders})", record_ids)
+        deleted_records = [dict(row) for row in cursor.fetchall()]
+        
+        if not deleted_records:
+            conn.close()
+            raise HTTPException(status_code=404, detail="未找到任何记录")
+        
+        # 2. 创建撤销记录
+        import json
+        undo_data = {
+            "operation": "batch_delete",
+            "deleted_data": deleted_records,
+            "timestamp": datetime.now().isoformat(),
+            "user_id": current_user.get("id")
+        }
+        
+        cursor.execute("""
+            INSERT INTO batch_operations (operation_type, operation_data, created_by, created_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, ["batch_delete", json.dumps(undo_data, ensure_ascii=False), current_user.get("id")])
+        operation_id = cursor.lastrowid
+        
+        # 3. 执行批量删除
+        cursor.execute(f"DELETE FROM admission_records WHERE id IN ({placeholders})", record_ids)
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        
+        return {
+            "message": "批量删除成功",
+            "deleted_count": deleted_count,
+            "operation_id": operation_id,
+            "can_undo": True
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"批量删除失败：{str(e)}")
+
+
+@app.post("/api/records/batch/undo/{operation_id}")
+async def undo_batch_operation(operation_id: int, current_user: dict = Depends(get_current_user)):
+    """
+    撤销批量操作
+    
+    支持撤销：
+    - batch_update: 恢复原始数据
+    - batch_delete: 恢复被删除的记录
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 获取操作记录
+        cursor.execute("SELECT * FROM batch_operations WHERE id = ?", [operation_id])
+        operation = cursor.fetchone()
+        
+        if not operation:
+            conn.close()
+            raise HTTPException(status_code=404, detail="操作记录不存在")
+        
+        operation = dict(operation)
+        
+        # 检查是否已撤销
+        if operation.get("is_undone"):
+            conn.close()
+            raise HTTPException(status_code=400, detail="该操作已被撤销")
+        
+        # 检查操作时间（只允许撤销 24 小时内的操作）
+        from datetime import datetime, timedelta
+        operation_time = datetime.fromisoformat(operation["created_at"])
+        if datetime.now() - operation_time > timedelta(hours=24):
+            conn.close()
+            raise HTTPException(status_code=400, detail="只能撤销 24 小时内的操作")
+        
+        import json
+        operation_data = json.loads(operation["operation_data"])
+        
+        if operation["operation_type"] == "batch_update":
+            # 撤销批量更新：恢复原始数据
+            original_data = operation_data.get("original_data", [])
+            for record in original_data:
+                record_id = record["id"]
+                # 构建恢复 SQL
+                update_clauses = []
+                values = []
+                for key, value in record.items():
+                    if key not in ["id", "created_at", "updated_at"]:
+                        update_clauses.append(f"{key} = ?")
+                        values.append(value)
+                values.append(record_id)
+                query = f"UPDATE admission_records SET {', '.join(update_clauses)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                cursor.execute(query, values)
+        
+        elif operation["operation_type"] == "batch_delete":
+            # 撤销批量删除：恢复被删除的记录
+            deleted_data = operation_data.get("deleted_data", [])
+            for record in deleted_data:
+                # 移除 id 让数据库自增
+                record_copy = {k: v for k, v in record.items() if k != "id"}
+                columns = ', '.join(record_copy.keys())
+                placeholders = ', '.join(['?' for _ in record_copy])
+                values = list(record_copy.values())
+                query = f"INSERT INTO admission_records ({columns}, updated_at) VALUES ({placeholders}, CURRENT_TIMESTAMP)"
+                cursor.execute(query, values)
+        
+        # 2. 标记操作为已撤销
+        cursor.execute("""
+            UPDATE batch_operations 
+            SET is_undone = 1, undone_at = CURRENT_TIMESTAMP, undone_by = ?
+            WHERE id = ?
+        """, [current_user.get("id"), operation_id])
+        
+        conn.commit()
+        
+        return {
+            "message": "撤销成功",
+            "operation_id": operation_id,
+            "operation_type": operation["operation_type"]
+        }
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"撤销失败：{str(e)}")
+
+
+@app.get("/api/records/batch/operations")
+async def get_batch_operations(limit: int = 20, current_user: dict = Depends(get_current_user)):
+    """
+    获取批量操作历史记录
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM batch_operations 
+        ORDER BY created_at DESC 
+        LIMIT ?
+    """, [limit])
+    
+    operations = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    
+    return {"operations": operations, "total": len(operations)}
+
+
+# 初始化批量操作表
+def init_batch_operations_table():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS batch_operations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation_type TEXT NOT NULL,
+            operation_data TEXT NOT NULL,
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_undone INTEGER DEFAULT 0,
+            undone_by INTEGER,
+            undone_at TIMESTAMP
+        )
+    """)
+    
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_op_type ON batch_operations(operation_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_op_created ON batch_operations(created_at)")
+    
+    conn.commit()
+    conn.close()
+
+# 初始化批量操作表
+init_batch_operations_table()
+
+@app.get("/api/tasks")
+async def get_tasks(status: str = None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM tasks"
+    params = []
+    if status:
+        query += " WHERE status = ?"
+        params.append(status)
+    query += " ORDER BY created_at DESC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return {"tasks": [dict(row) for row in rows]}
+
+@app.post("/api/tasks")
+async def create_task(task: Dict[str, Any]):
+    if "task_type" not in task:
+        raise HTTPException(status_code=400, detail="缺少任务类型")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tasks (task_type, status, progress) VALUES (?, 'pending', 0)", [task.get("task_type")])
+    conn.commit()
+    task_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM tasks WHERE id = ?", [task_id])
+    new_task = dict(cursor.fetchone())
+    conn.close()
+    return {"message": "任务创建成功", "task": new_task}
+
+# ============== 采集任务队列 API ==============
+
+@app.get("/api/collection-tasks")
+async def get_collection_tasks(status: str = None, page: int = 1, page_size: int = 50):
+    """获取采集任务列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = "SELECT * FROM collection_tasks WHERE 1=1"
+    params = []
+    
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+    
+    query += " ORDER BY priority DESC, created_at DESC LIMIT ? OFFSET ?"
+    params.extend([page_size, (page - 1) * page_size])
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    
+    # 获取总数
+    count_query = "SELECT COUNT(*) FROM collection_tasks WHERE 1=1"
+    count_params = []
+    if status:
+        count_query += " AND status = ?"
+        count_params.append(status)
+    cursor.execute(count_query, count_params)
+    total = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    tasks = []
+    for row in rows:
+        task = dict(row)
+        # 格式化时间
+        if task.get('created_at'):
+            task['created_at'] = task['created_at'].replace('T', ' ')[:19]
+        if task.get('started_at'):
+            task['started_at'] = task['started_at'].replace('T', ' ')[:19]
+        if task.get('completed_at'):
+            task['completed_at'] = task['completed_at'].replace('T', ' ')[:19]
+        tasks.append(task)
+    
+    return {
+        "tasks": tasks,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size
+    }
+
+@app.post("/api/collection-tasks/batch")
+async def batch_create_tasks(request: Request):
+    """批量创建采集任务"""
+    data = await request.json()
+    urls = data.get("urls", [])
+    
+    if not urls:
+        raise HTTPException(status_code=400, detail="请提供 URL 列表")
+    
+    # 限制批量数量
+    if len(urls) > 1000:
+        raise HTTPException(status_code=400, detail="单次最多支持 1000 个 URL")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    created_count = 0
+    skipped_count = 0
+    
+    for url in urls:
+        url = url.strip()
+        if not url:
+            continue
+        
+        # 检查是否已存在
+        cursor.execute("SELECT id FROM collection_tasks WHERE url = ?", [url])
+        if cursor.fetchone():
+            skipped_count += 1
+            continue
+        
+        cursor.execute(
+            "INSERT INTO collection_tasks (url, status, priority, progress) VALUES (?, 'pending', 5, 0)",
+            [url]
+        )
+        created_count += 1
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "message": "批量创建成功",
+        "created": created_count,
+        "skipped": skipped_count,
+        "total": len(urls)
+    }
+
+@app.post("/api/collection-tasks")
+async def create_collection_task(task: Dict[str, Any]):
+    """创建单个采集任务"""
+    if "url" not in task:
+        raise HTTPException(status_code=400, detail="缺少 URL")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查是否已存在
+    cursor.execute("SELECT id FROM collection_tasks WHERE url = ?", [task.get("url")])
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="该 URL 已存在于任务队列中")
+    
+    cursor.execute(
+        "INSERT INTO collection_tasks (url, title, source, priority, status, progress, created_by) VALUES (?, ?, ?, ?, 'pending', 0, ?)",
+        [
+            task.get("url"),
+            task.get("title"),
+            task.get("source"),
+            task.get("priority", 5),
+            task.get("created_by")
+        ]
+    )
+    conn.commit()
+    task_id = cursor.lastrowid
+    cursor.execute("SELECT * FROM collection_tasks WHERE id = ?", [task_id])
+    new_task = dict(cursor.fetchone())
+    conn.close()
+    
+    return {"message": "任务创建成功", "task": new_task}
+
+@app.get("/api/collection-tasks/{task_id}")
+async def get_collection_task(task_id: int):
+    """获取单个任务详情"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM collection_tasks WHERE id = ?", [task_id])
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    task = dict(row)
+    if task.get('created_at'):
+        task['created_at'] = task['created_at'].replace('T', ' ')[:19]
+    if task.get('started_at'):
+        task['started_at'] = task['started_at'].replace('T', ' ')[:19]
+    if task.get('completed_at'):
+        task['completed_at'] = task['completed_at'].replace('T', ' ')[:19]
+    
+    return task
+
+@app.post("/api/collection-tasks/{task_id}/start")
+async def start_collection_task(task_id: int):
+    """开始执行采集任务"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM collection_tasks WHERE id = ?", [task_id])
+    row = cursor.fetchone()
+    
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    task = dict(row)
+    if task['status'] == 'processing':
+        conn.close()
+        raise HTTPException(status_code=400, detail="任务已在处理中")
+    
+    if task['status'] == 'completed':
+        conn.close()
+        raise HTTPException(status_code=400, detail="任务已完成，无法重复执行")
+    
+    # 更新状态为处理中
+    cursor.execute(
+        "UPDATE collection_tasks SET status = 'processing', started_at = CURRENT_TIMESTAMP, progress = 0 WHERE id = ?",
+        [task_id]
+    )
+    conn.commit()
+    conn.close()
+    
+    # TODO: 这里应该触发实际的采集逻辑
+    # 目前只是更新状态，实际采集由后台任务处理
+    
+    return {"message": "任务已开始", "task_id": task_id}
+
+@app.post("/api/collection-tasks/{task_id}/progress")
+async def update_task_progress(task_id: int, progress_data: Dict[str, Any]):
+    """更新任务进度"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM collection_tasks WHERE id = ?", [task_id])
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    progress = progress_data.get("progress", 0)
+    records_extracted = progress_data.get("records_extracted", 0)
+    
+    cursor.execute(
+        "UPDATE collection_tasks SET progress = ?, records_extracted = ? WHERE id = ?",
+        [progress, records_extracted, task_id]
+    )
+    conn.commit()
+    conn.close()
+    
+    return {"message": "进度更新成功"}
+
+@app.put("/api/collection-tasks/{task_id}/complete")
+async def complete_collection_task(task_id: int, complete_data: Dict[str, Any]):
+    """标记任务完成"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM collection_tasks WHERE id = ?", [task_id])
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    status = complete_data.get("status", "completed")
+    error_message = complete_data.get("error_message")
+    records_extracted = complete_data.get("records_extracted", 0)
+    
+    if status == "failed":
+        cursor.execute(
+            "UPDATE collection_tasks SET status = 'failed', error_message = ?, records_extracted = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [error_message, records_extracted, task_id]
+        )
+    else:
+        cursor.execute(
+            "UPDATE collection_tasks SET status = 'completed', records_extracted = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [records_extracted, task_id]
+        )
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "任务状态已更新"}
+
+@app.delete("/api/collection-tasks/{task_id}")
+async def delete_collection_task(task_id: int):
+    """删除采集任务"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM collection_tasks WHERE id = ?", [task_id])
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    cursor.execute("DELETE FROM collection_tasks WHERE id = ?", [task_id])
+    conn.commit()
+    conn.close()
+    
+    return {"message": "任务删除成功"}
+
+@app.post("/api/collection-tasks/batch-delete")
+async def batch_delete_tasks(request: Request):
+    """批量删除任务"""
+    data = await request.json()
+    task_ids = data.get("task_ids", [])
+    
+    if not task_ids:
+        raise HTTPException(status_code=400, detail="请提供任务 ID 列表")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    placeholders = ','.join('?' * len(task_ids))
+    cursor.execute(f"DELETE FROM collection_tasks WHERE id IN ({placeholders})", task_ids)
+    deleted_count = cursor.rowcount
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "批量删除成功", "deleted": deleted_count}
+
+@app.post("/api/collection-tasks/batch-start")
+async def batch_start_tasks(request: Request):
+    """批量开始任务"""
+    data = await request.json()
+    task_ids = data.get("task_ids", [])
+    
+    if not task_ids:
+        raise HTTPException(status_code=400, detail="请提供任务 ID 列表")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    started_count = 0
+    for task_id in task_ids:
+        cursor.execute("SELECT status FROM collection_tasks WHERE id = ?", [task_id])
+        row = cursor.fetchone()
+        if row and row[0] == 'pending':
+            cursor.execute(
+                "UPDATE collection_tasks SET status = 'processing', started_at = CURRENT_TIMESTAMP WHERE id = ?",
+                [task_id]
+            )
+            started_count += 1
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "批量启动成功", "started": started_count}
+
+# ============== 统计 API ==============
+
+@app.get("/api/stats/overview")
+async def get_stats_overview():
+    """总体统计：总数、国家数、大学数、奖学金总额"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 总记录数
+    cursor.execute("SELECT COUNT(*) FROM admission_records")
+    total_records = cursor.fetchone()[0]
+    
+    # 涉及国家数
+    cursor.execute("SELECT COUNT(DISTINCT country_id) FROM admission_records WHERE country_id IS NOT NULL")
+    total_countries = cursor.fetchone()[0]
+    
+    # 录取大学数
+    cursor.execute("SELECT COUNT(DISTINCT university_id) FROM admission_records WHERE university_id IS NOT NULL")
+    total_universities = cursor.fetchone()[0]
+    
+    # 奖学金总额
+    cursor.execute("SELECT COALESCE(SUM(scholarship_amount), 0) FROM admission_records")
+    total_scholarship = cursor.fetchone()[0]
+    
+    # 已验证记录数
+    cursor.execute("SELECT COUNT(*) FROM admission_records WHERE is_verified = 1")
+    verified_count = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        "total_records": total_records,
+        "total_countries": total_countries,
+        "total_universities": total_universities,
+        "total_scholarship": total_scholarship,
+        "verified_count": verified_count
+    }
+
+@app.get("/api/stats/country")
+async def get_stats_country():
+    """按国家统计录取人数"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT c.name as country, COUNT(ar.id) as count
+        FROM admission_records ar
+        LEFT JOIN countries c ON ar.country_id = c.id
+        WHERE c.name IS NOT NULL
+        GROUP BY c.name
+        ORDER BY count DESC
+    """)
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"data": [{"country": row[0], "count": row[1]} for row in rows]}
+
+@app.get("/api/stats/university")
+async def get_stats_university(top: int = 10):
+    """按大学统计录取人数（TOP10）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT u.name as university, u.name_en as university_en, COUNT(ar.id) as count
+        FROM admission_records ar
+        LEFT JOIN universities u ON ar.university_id = u.id
+        WHERE u.name IS NOT NULL
+        GROUP BY u.id, u.name, u.name_en
+        ORDER BY count DESC
+        LIMIT ?
+    """, [top])
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"data": [{"university": row[0], "university_en": row[1], "count": row[2]} for row in rows]}
+
+@app.get("/api/stats/trend")
+async def get_stats_trend():
+    """年度趋势统计"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT admission_year, COUNT(*) as count
+        FROM admission_records
+        WHERE admission_year IS NOT NULL
+        GROUP BY admission_year
+        ORDER BY admission_year ASC
+    """)
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"data": [{"year": row[0], "count": row[1]} for row in rows]}
+
+@app.get("/api/stats/major")
+async def get_stats_major(top: int = 20):
+    """按专业统计录取人数（TOP20）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT major, COUNT(*) as count
+        FROM admission_records
+        WHERE major IS NOT NULL AND major != ''
+        GROUP BY major
+        ORDER BY count DESC
+        LIMIT ?
+    """, [top])
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"data": [{"major": row[0], "count": row[1]} for row in rows]}
+
+@app.get("/api/stats/school")
+async def get_stats_school():
+    """按来源学校统计录取人数"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 直接使用 source_school 文本字段统计
+    cursor.execute("""
+        SELECT source_school, COUNT(*) as count
+        FROM admission_records
+        WHERE source_school IS NOT NULL AND source_school != ''
+        GROUP BY source_school
+        ORDER BY count DESC
+    """)
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"data": [{"school": row[0], "official_account": "", "count": row[1]} for row in rows]}
+
+# ============== 手动录入 API ==============
+
+@app.get("/api/countries")
+async def get_countries():
+    """获取国家列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM countries ORDER BY name")
+    rows = cursor.fetchall()
+    conn.close()
+    return {"data": [dict(row) for row in rows]}
+
+@app.get("/api/universities")
+async def get_universities(limit: int = 500):
+    """获取大学列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM universities ORDER BY name LIMIT ?", [limit])
+    rows = cursor.fetchall()
+    conn.close()
+    return {"data": [dict(row) for row in rows]}
+
+@app.get("/api/source-schools")
+async def get_source_schools():
+    """获取来源学校列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM source_schools ORDER BY name")
+    rows = cursor.fetchall()
+    conn.close()
+    return {"data": [dict(row) for row in rows]}
+
+@app.post("/api/countries")
+async def create_country(country: Dict[str, Any]):
+    """创建新国家"""
+    if "name" not in country:
+        raise HTTPException(status_code=400, detail="缺少国家名称")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("INSERT INTO countries (name, name_en) VALUES (?, ?)", 
+                      [country.get("name"), country.get("name_en")])
+        conn.commit()
+        country_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM countries WHERE id = ?", [country_id])
+        new_country = dict(cursor.fetchone())
+        conn.close()
+        return new_country
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail="国家已存在")
+
+@app.post("/api/universities")
+async def create_university(university: Dict[str, Any]):
+    """创建新大学"""
+    if "name" not in university:
+        raise HTTPException(status_code=400, detail="缺少大学名称")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("INSERT INTO universities (name, name_en, country_id) VALUES (?, ?, ?)",
+                      [university.get("name"), university.get("name_en"), university.get("country_id")])
+        conn.commit()
+        university_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM universities WHERE id = ?", [university_id])
+        new_university = dict(cursor.fetchone())
+        conn.close()
+        return new_university
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail="大学已存在")
+
+@app.post("/api/source-schools")
+async def create_source_school(school: Dict[str, Any]):
+    """创建新来源学校"""
+    if "name" not in school:
+        raise HTTPException(status_code=400, detail="缺少学校名称")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("INSERT INTO source_schools (name, official_account) VALUES (?, ?)",
+                      [school.get("name"), school.get("official_account")])
+        conn.commit()
+        school_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM source_schools WHERE id = ?", [school_id])
+        new_school = dict(cursor.fetchone())
+        conn.close()
+        return new_school
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail="学校已存在")
+
+@app.post("/api/records/manual-entry")
+async def manual_entry_record(record: Dict[str, Any]):
+    """
+    手动录入单条录取记录（兼容现有表结构）
+    
+    必填字段：
+    - student_name: 学生姓名
+    - university: 录取大学名称
+    - country: 国家名称
+    
+    可选字段：
+    - student_name_en, major, major_en, gpa, toefl, ielts, sat
+    - scholarship, scholarship_amount, degree, application_year, admission_year
+    - source_school, article_url, requirements, portfolio, is_verified
+    """
+    # 验证必填字段
+    required = ["student_name", "university", "country"]
+    for field in required:
+        if field not in record or not record[field]:
+            raise HTTPException(status_code=400, detail=f"缺少必填字段：{field}")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 查找或创建国家（用于下拉列表）
+        country_name = record["country"]
+        cursor.execute("SELECT id FROM countries WHERE name = ?", [country_name])
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("INSERT INTO countries (name) VALUES (?)", [country_name])
+        
+        # 2. 查找或创建大学（用于下拉列表）
+        university_name = record["university"]
+        cursor.execute("SELECT id FROM universities WHERE name = ?", [university_name])
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("INSERT INTO universities (name) VALUES (?)", [university_name])
+        
+        # 3. 查找来源学校（可选）
+        if record.get("source_school"):
+            cursor.execute("SELECT id FROM source_schools WHERE name = ?", [record["source_school"]])
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("INSERT INTO source_schools (name) VALUES (?)", [record["source_school"]])
+        
+        # 4. 插入录取记录（使用现有表结构的文本字段）
+        cursor.execute("""
+            INSERT INTO admission_records (
+                student_name, student_name_en, source_school, country, university, university_en,
+                major, major_en, gpa, toefl, ielts, sat,
+                scholarship, scholarship_amount, scholarship_type, degree,
+                admission_year, article_url, article_title, requirements, portfolio,
+                is_verified, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """, [
+            record.get("student_name"),
+            record.get("student_name_en"),
+            record.get("source_school"),
+            record.get("country"),
+            record.get("university"),
+            record.get("university_en"),
+            record.get("major"),
+            record.get("major_en"),
+            record.get("gpa"),
+            record.get("toefl"),
+            record.get("ielts"),
+            record.get("sat"),
+            record.get("scholarship"),
+            record.get("scholarship_amount"),
+            record.get("scholarship"),  # scholarship_type
+            record.get("degree"),
+            record.get("admission_year"),
+            record.get("article_url"),
+            record.get("article_title"),
+            record.get("requirements"),
+            record.get("portfolio"),
+            1 if record.get("is_verified") else 0
+        ])
+        
+        conn.commit()
+        record_id = cursor.lastrowid
+        
+        # 返回创建的记录
+        cursor.execute("SELECT * FROM admission_records WHERE id = ?", [record_id])
+        new_record = dict(cursor.fetchone())
+        conn.close()
+        
+        return {"success": True, "message": "录入成功", "record_id": record_id, "record": new_record}
+        
+    except sqlite3.IntegrityError as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail=f"数据冲突：{str(e)}")
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"录入失败：{str(e)}")
+
+@app.post("/api/records/manual-entry/batch")
+async def manual_entry_batch(batch_data: Dict[str, Any]):
+    """
+    批量手动录入录取记录
+    
+    请求格式：
+    {
+        "records": [
+            {
+                "student_name": "张三",
+                "university": "UC Berkeley",
+                "country": "美国",
+                "major": "CS",
+                "gpa": 3.8
+            },
+            ...
+        ]
+    }
+    
+    返回：
+    {
+        "success": true,
+        "created": 10,
+        "skipped": 2,
+        "errors": []
+    }
+    """
+    records = batch_data.get("records", [])
+    if not records:
+        raise HTTPException(status_code=400, detail="请提供记录数据")
+    
+    if len(records) > 100:
+        raise HTTPException(status_code=400, detail="单次最多支持 100 条记录")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    created_count = 0
+    skipped_count = 0
+    errors = []
+    
+    for idx, record in enumerate(records):
+        try:
+            # 验证必填字段
+            if not record.get("student_name") or not record.get("university") or not record.get("country"):
+                errors.append(f"记录 {idx + 1}: 缺少必填字段")
+                skipped_count += 1
+                continue
+            
+            # 查找或创建国家（用于下拉列表）
+            country_name = record["country"]
+            cursor.execute("SELECT id FROM countries WHERE name = ?", [country_name])
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("INSERT INTO countries (name) VALUES (?)", [country_name])
+            
+            # 查找或创建大学（用于下拉列表）
+            university_name = record["university"]
+            cursor.execute("SELECT id FROM universities WHERE name = ?", [university_name])
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("INSERT INTO universities (name) VALUES (?)", [university_name])
+            
+            # 查找来源学校（可选）
+            if record.get("source_school"):
+                cursor.execute("SELECT id FROM source_schools WHERE name = ?", [record["source_school"]])
+                row = cursor.fetchone()
+                if not row:
+                    cursor.execute("INSERT INTO source_schools (name) VALUES (?)", [record["source_school"]])
+            
+            # 插入录取记录（使用现有表结构的文本字段）
+            cursor.execute("""
+                INSERT INTO admission_records (
+                    student_name, student_name_en, source_school, country, university, university_en,
+                    major, major_en, gpa, toefl, ielts, sat,
+                    scholarship, scholarship_amount, scholarship_type, degree,
+                    admission_year, article_url, article_title, requirements, portfolio,
+                    is_verified, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, [
+                record.get("student_name"),
+                record.get("student_name_en"),
+                record.get("source_school"),
+                record.get("country"),
+                record.get("university"),
+                record.get("university_en"),
+                record.get("major"),
+                record.get("major_en"),
+                record.get("gpa"),
+                record.get("toefl"),
+                record.get("ielts"),
+                record.get("sat"),
+                record.get("scholarship"),
+                record.get("scholarship_amount"),
+                record.get("scholarship"),  # scholarship_type
+                record.get("degree"),
+                record.get("admission_year"),
+                record.get("article_url"),
+                record.get("article_title"),
+                record.get("requirements"),
+                record.get("portfolio"),
+                1 if record.get("is_verified") else 0
+            ])
+            
+            created_count += 1
+            
+        except sqlite3.IntegrityError as e:
+            errors.append(f"记录 {idx + 1}: 数据冲突 - {str(e)}")
+            skipped_count += 1
+        except Exception as e:
+            errors.append(f"记录 {idx + 1}: {str(e)}")
+            skipped_count += 1
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "success": len(errors) == 0,
+        "created": created_count,
+        "skipped": skipped_count,
+        "errors": errors[:10]  # 最多返回 10 个错误
+    }
+
+@app.get("/api/filters/options")
+async def get_filter_options():
+    """
+    获取筛选器所需的所有选项（来源学校、国家、年份、验证状态）
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 获取来源学校列表
+    cursor.execute("SELECT DISTINCT ss.name FROM source_schools ss INNER JOIN admission_records ar ON ss.id = ar.source_school_id WHERE ss.name IS NOT NULL ORDER BY ss.name")
+    source_schools = [row[0] for row in cursor.fetchall()]
+    
+    # 获取国家列表
+    cursor.execute("SELECT DISTINCT c.name FROM countries c INNER JOIN admission_records ar ON c.id = ar.country_id WHERE c.name IS NOT NULL ORDER BY c.name")
+    countries = [row[0] for row in cursor.fetchall()]
+    
+    # 获取年份列表（从大到小）
+    cursor.execute("SELECT DISTINCT admission_year FROM admission_records WHERE admission_year IS NOT NULL ORDER BY admission_year DESC")
+    years = [row[0] for row in cursor.fetchall()]
+    
+    # 验证状态选项
+    verified_options = [
+        {"value": "", "label": "全部"},
+        {"value": "true", "label": "已验证"},
+        {"value": "false", "label": "未验证"}
+    ]
+    
+    conn.close()
+    
+    return {
+        "source_schools": source_schools,
+        "countries": countries,
+        "years": years,
+        "verified": verified_options
+    }
+
+# ============== Excel 导入 API ==============
+
+@app.get("/api/import/template")
+async def download_import_template():
+    """
+    下载 Excel 导入模板
+    """
+    template_path = "/root/.openclaw/workspace/大学录取信息整理系统/backend/app/templates/录取数据导入模板.xlsx"
+    
+    if not os.path.exists(template_path):
+        raise HTTPException(status_code=404, detail="模板文件不存在")
+    
+    import urllib.parse
+    filename_encoded = urllib.parse.quote("录取数据导入模板.xlsx")
+    
+    return FileResponse(
+        template_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename_encoded}"
+        }
+    )
+
+
+@app.post("/api/import/excel")
+async def import_excel(file: UploadFile = File(...)):
+    """
+    从 Excel 文件批量导入录取数据
+    
+    支持字段：
+    - 必填：student_name(学生姓名), country(国家), university(录取大学)
+    - 可选：student_name_en, source_school, university_en, major, major_en, degree,
+           gpa, toefl, ielts, sat, act, gre, gmat, scholarship, scholarship_amount,
+           application_year, admission_year, article_url, article_title,
+           requirements, portfolio, is_verified
+    
+    返回：
+    {
+        "success": true/false,
+        "total": 总记录数，
+        "created": 成功导入数，
+        "skipped": 跳过数（重复数据）,
+        "errors": [错误详情列表]
+    }
+    """
+    # 验证文件类型
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="请上传 Excel 文件 (.xlsx 或 .xls)")
+    
+    # 限制文件大小 (10MB)
+    file_size = 0
+    file_content = await file.read()
+    file_size = len(file_content)
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="文件大小不能超过 10MB")
+    
+    try:
+        # 读取 Excel 文件
+        df = pd.read_excel(io.BytesIO(file_content), sheet_name="填写示例")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"无法读取 Excel 文件：{str(e)}")
+    
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Excel 文件为空")
+    
+    # 限制导入数量
+    if len(df) > 1000:
+        raise HTTPException(status_code=400, detail="单次最多支持导入 1000 条记录")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    created_count = 0
+    skipped_count = 0
+    errors = []
+    
+    # 预加载现有数据用于重复检测
+    cursor.execute("""
+        SELECT student_name, university, admission_year 
+        FROM admission_records 
+        WHERE student_name IS NOT NULL AND university IS NOT NULL
+    """)
+    existing_records = set()
+    for row in cursor.fetchall():
+        existing_records.add((row[0], row[1], str(row[2]) if row[2] else ""))
+    
+    for idx, row in df.iterrows():
+        try:
+            row_num = idx + 2  # Excel 行号（从 2 开始，因为第 1 行是表头）
+            
+            # 1. 验证必填字段
+            student_name = str(row.get('student_name', '')).strip() if pd.notna(row.get('student_name')) else ''
+            country = str(row.get('country', '')).strip() if pd.notna(row.get('country')) else ''
+            university = str(row.get('university', '')).strip() if pd.notna(row.get('university')) else ''
+            
+            if not student_name:
+                errors.append(f"第{row_num}行：缺少必填字段 - 学生姓名 (student_name)")
+                skipped_count += 1
+                continue
+            
+            if not country:
+                errors.append(f"第{row_num}行：缺少必填字段 - 国家/地区 (country)")
+                skipped_count += 1
+                continue
+            
+            if not university:
+                errors.append(f"第{row_num}行：缺少必填字段 - 录取大学 (university)")
+                skipped_count += 1
+                continue
+            
+            # 2. 重复检测（学生姓名 + 大学 + 入学年份）
+            admission_year = str(int(row.get('admission_year', 2026))) if pd.notna(row.get('admission_year')) else "2026"
+            record_key = (student_name, university, admission_year)
+            
+            if record_key in existing_records:
+                errors.append(f"第{row_num}行：重复数据 - {student_name} + {university} + {admission_year}")
+                skipped_count += 1
+                continue
+            
+            # 3. 准备其他字段
+            def safe_float(val, default=None):
+                try:
+                    return float(val) if pd.notna(val) else default
+                except (ValueError, TypeError):
+                    return default
+            
+            def safe_int(val, default=None):
+                try:
+                    return int(float(val)) if pd.notna(val) else default
+                except (ValueError, TypeError):
+                    return default
+            
+            # 4. 插入记录（使用文本字段而非外键 ID）
+            cursor.execute("""
+                INSERT INTO admission_records (
+                    student_name, student_name_en, source_school, country, university,
+                    university_en, major, major_en, degree, gpa, toefl, ielts, sat, act, gre, gmat,
+                    scholarship, scholarship_amount, scholarship_type, application_year, admission_year,
+                    article_url, article_title, requirements, portfolio,
+                    is_verified, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, [
+                student_name,
+                str(row.get('student_name_en', '')).strip() if pd.notna(row.get('student_name_en')) else None,
+                str(row.get('source_school', '')).strip() if pd.notna(row.get('source_school')) else None,
+                country,
+                university,
+                str(row.get('university_en', '')).strip() if pd.notna(row.get('university_en')) else None,
+                str(row.get('major', '')).strip() if pd.notna(row.get('major')) else None,
+                str(row.get('major_en', '')).strip() if pd.notna(row.get('major_en')) else None,
+                str(row.get('degree', '')).strip() if pd.notna(row.get('degree')) else None,
+                safe_float(row.get('gpa')),
+                safe_int(row.get('toefl')),
+                safe_float(row.get('ielts')),
+                safe_int(row.get('sat')),
+                safe_int(row.get('act')),
+                safe_int(row.get('gre')),
+                safe_int(row.get('gmat')),
+                str(row.get('scholarship', '')).strip() if pd.notna(row.get('scholarship')) else None,
+                safe_float(row.get('scholarship_amount')),
+                str(row.get('scholarship', '')).strip() if pd.notna(row.get('scholarship')) else None,  # scholarship_type
+                safe_int(row.get('application_year')),
+                safe_int(row.get('admission_year')),
+                str(row.get('article_url', '')).strip() if pd.notna(row.get('article_url')) else None,
+                str(row.get('article_title', '')).strip() if pd.notna(row.get('article_title')) else None,
+                str(row.get('requirements', '')).strip() if pd.notna(row.get('requirements')) else None,
+                str(row.get('portfolio', '')).strip() if pd.notna(row.get('portfolio')) else None,
+                1 if safe_int(row.get('is_verified'), 0) else 0
+            ])
+            
+            created_count += 1
+            existing_records.add(record_key)  # 添加到已存在集合，防止同一文件中重复
+            
+        except Exception as e:
+            errors.append(f"第{idx + 2}行：{str(e)}")
+            skipped_count += 1
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        "success": len(errors) == 0,
+        "total": len(df),
+        "created": created_count,
+        "skipped": skipped_count,
+        "errors": errors[:20]  # 最多返回 20 个错误
+    }
+
+
+@app.get("/api/records/export")
+async def export_records(format: str = Query("excel", description="导出格式：excel 或 csv")):
+    """
+    导出录取记录为 Excel 或 CSV 格式
+    导出字段：学生姓名（中文 + 英文）、来源学校、国家/地区、录取大学（中文 + 英文）、录取专业、奖学金信息、录取条件、状态
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 获取所有记录（包含完整字段）
+    query = """
+    SELECT 
+        ar.student_name,
+        ar.student_name_en,
+        ss.name as source_school,
+        c.name as country,
+        u.name as university,
+        u.name_en as university_en,
+        ar.major,
+        ar.scholarship,
+        ar.scholarship_amount,
+        ar.gpa,
+        ar.toefl,
+        ar.ielts,
+        ar.sat,
+        ar.is_verified
+    FROM admission_records ar
+    LEFT JOIN source_schools ss ON ar.source_school_id = ss.id
+    LEFT JOIN universities u ON ar.university_id = u.id
+    LEFT JOIN countries c ON ar.country_id = c.id
+    ORDER BY ar.created_at DESC
+    """
+    
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # 准备数据
+    data = []
+    for row in rows:
+        # 转换为字典
+        row_dict = dict(row)
+        
+        # 构建录取条件字符串
+        requirements = []
+        if row_dict.get('gpa'):
+            requirements.append(f"GPA: {row_dict['gpa']}")
+        if row_dict.get('toefl'):
+            requirements.append(f"TOEFL: {row_dict['toefl']}")
+        if row_dict.get('ielts'):
+            requirements.append(f"IELTS: {row_dict['ielts']}")
+        if row_dict.get('sat'):
+            requirements.append(f"SAT: {row_dict['sat']}")
+        
+        # 构建奖学金显示
+        scholarship_display = ''
+        if row_dict.get('scholarship_amount'):
+            scholarship_display = f"${row_dict['scholarship_amount']:,}"
+        elif row_dict.get('scholarship'):
+            scholarship_display = row_dict['scholarship']
+        
+        # 状态
+        status = '已验证' if row_dict.get('is_verified') else '待验证'
+        
+        data.append({
+            '学生姓名': row_dict.get('student_name', ''),
+            '学生姓名 (英文)': row_dict.get('student_name_en', ''),
+            '来源学校': row_dict.get('source_school', ''),
+            '国家/地区': row_dict.get('country', ''),
+            '录取大学': row_dict.get('university', ''),
+            '录取大学 (英文)': row_dict.get('university_en', ''),
+            '录取专业': row_dict.get('major', ''),
+            '奖学金信息': scholarship_display,
+            '录取条件': ' | '.join(requirements) if requirements else '',
+            '状态': status
+        })
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="没有可导出的数据")
+    
+    # 生成文件名（包含日期）
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    import urllib.parse
+    
+    if format.lower() == "csv":
+        # CSV 导出
+        df = pd.DataFrame(data)
+        stream = io.StringIO()
+        df.to_csv(stream, index=False, encoding='utf-8-sig')
+        stream.seek(0)
+        
+        # 使用 RFC 5987 编码处理中文文件名
+        filename_encoded = urllib.parse.quote(f"录取数据_{date_str}.csv")
+        
+        return StreamingResponse(
+            iter([stream.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{filename_encoded}"
+            }
+        )
+    else:
+        # Excel 导出（默认）
+        df = pd.DataFrame(data)
+        stream = io.BytesIO()
+        with pd.ExcelWriter(stream, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='录取数据')
+        
+        stream.seek(0)
+        
+        # 使用 RFC 5987 编码处理中文文件名
+        filename_encoded = urllib.parse.quote(f"录取数据_{date_str}.xlsx")
+        
+        return StreamingResponse(
+            stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{filename_encoded}"
+            }
+        )
+
+
+@app.post("/api/records/export/pdf")
+async def export_records_pdf(filters: Dict[str, Any] = None):
+    """
+    导出录取记录为 PDF 格式报告
+    支持自定义筛选条件，包含统计图表和录取列表
+    """
+    if filters is None:
+        filters = {}
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 构建筛选条件
+    where_clauses = []
+    params = []
+    
+    if filters.get('country'):
+        where_clauses.append("c.name = ?")
+        params.append(filters['country'])
+    
+    if filters.get('year'):
+        where_clauses.append("ar.admission_year = ?")
+        params.append(filters['year'])
+    
+    if filters.get('verified') is not None:
+        where_clauses.append("ar.is_verified = ?")
+        params.append(1 if filters['verified'] else 0)
+    
+    if filters.get('university'):
+        where_clauses.append("u.name LIKE ?")
+        params.append(f"%{filters['university']}%")
+    
+    if filters.get('major'):
+        where_clauses.append("ar.major LIKE ?")
+        params.append(f"%{filters['major']}%")
+    
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+    
+    # 获取筛选后的记录
+    query = f"""
+    SELECT 
+        ar.student_name,
+        ar.student_name_en,
+        ss.name as source_school,
+        c.name as country,
+        u.name as university,
+        u.name_en as university_en,
+        ar.major,
+        ar.major_en,
+        ar.scholarship,
+        ar.scholarship_amount,
+        ar.gpa,
+        ar.toefl,
+        ar.ielts,
+        ar.sat,
+        ar.is_verified,
+        ar.admission_year
+    FROM admission_records ar
+    LEFT JOIN source_schools ss ON ar.source_school_id = ss.id
+    LEFT JOIN universities u ON ar.university_id = u.id
+    LEFT JOIN countries c ON ar.country_id = c.id
+    {where_sql}
+    ORDER BY ar.admission_year DESC, ar.created_at DESC
+    """
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # 转换为字典列表
+    records = [dict(row) for row in rows]
+    
+    if not records:
+        raise HTTPException(status_code=404, detail="没有符合条件的录取记录")
+    
+    try:
+        # 生成 PDF
+        pdf_data = create_pdf_report(records, filters)
+        
+        # 生成文件名
+        date_str = datetime.now().strftime("%Y%m%d")
+        filename = f"admission_report_{date_str}.pdf"
+        
+        return StreamingResponse(
+            io.BytesIO(pdf_data),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF 生成失败：{str(e)}")
+
+
+# 静态文件
+static_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+if os.path.exists(static_path):
+    app.mount("/assets", StaticFiles(directory=static_path), name="static")
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    if full_path.startswith("api/") or full_path.startswith("ws/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    static_file = os.path.join(static_path, full_path)
+    if os.path.exists(static_file) and os.path.isfile(static_file):
+        return FileResponse(static_file)
+    index_path = os.path.join(static_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return JSONResponse({"message": "大学录取信息整理系统 API", "version": "1.0.0", "docs": "/docs"})

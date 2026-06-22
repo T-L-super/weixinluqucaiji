@@ -1,0 +1,27 @@
+import requests
+
+# 获取前端页面内容
+response = requests.get('http://localhost:8000/')
+if response.status_code == 200:
+    html = response.text
+    
+    # 检查是否包含"数据来源"
+    if '数据来源' in html:
+        print("✓ 页面包含'数据来源'")
+    else:
+        print("✗ 页面不包含'数据来源'")
+    
+    # 检查是否还包含"来源学校"
+    if '来源学校' in html:
+        print("✗ 页面仍然包含'来源学校'")
+    else:
+        print("✓ 页面已移除'来源学校'")
+    
+    # 检查表格表头
+    if '<th>数据来源</th>' in html:
+        print("✓ 表格表头已更新为'数据来源'")
+    else:
+        print("✗ 表格表头未更新")
+        
+else:
+    print(f"请求失败: {response.status_code}")

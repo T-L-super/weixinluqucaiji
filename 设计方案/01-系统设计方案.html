@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设计方案 - 大学录取信息整理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; }
+        .section h2 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px; }
+        .section h3 { color: #1557b0; margin: 25px 0 15px; font-size: 20px; }
+        .content p { line-height: 2; color: #333; margin-bottom: 15px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 5px solid #1a73e8; }
+        .card h4 { color: #1a73e8; margin-bottom: 10px; }
+        .highlight { background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; margin: 20px 0; }
+        .info-box { background: #e8f0fe; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        ul, ol { margin-left: 30px; line-height: 2; color: #333; }
+        li { margin-bottom: 10px; }
+        .footer { background: #f8f9fa; padding: 30px 40px; text-align: center; border-top: 1px solid #e0e0e0; }
+        .footer p { color: #666; font-size: 14px; margin: 5px 0; }
+        .meta-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .meta-info p { margin: 5px 15px; color: #666; font-size: 14px; }
+        .tag { display: inline-block; background: #1a73e8; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-right: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #1a73e8; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .architecture { background: #f8f9fa; padding: 30px; border-radius: 10px; margin: 20px 0; }
+        .arch-layer { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; border: 2px solid #1a73e8; }
+        .arch-layer h4 { color: #1a73e8; margin-bottom: 15px; }
+        .arch-component { display: inline-block; background: #e8f0fe; padding: 10px 20px; border-radius: 5px; margin: 5px; }
+        .code-block { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 10px; overflow-x: auto; margin: 20px 0; font-family: 'Consolas', monospace; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ 系统设计方案</h1>
+            <p>大学录取信息整理系统</p>
+        </div>
+
+        <div class="content">
+            <div class="meta-info">
+                <p><strong>文档类型：</strong> <span class="tag">设计方案</span></p>
+                <p><strong>创建时间：</strong> 2026 年 3 月 18 日</p>
+                <p><strong>设计人：</strong> 909 运营助理</p>
+                <p><strong>版本：</strong> v1.0</p>
+            </div>
+
+            <div class="section">
+                <h2>1. 系统架构</h2>
+                <div class="architecture">
+                    <div class="arch-layer">
+                        <h4>🖥️ 用户层</h4>
+                        <div class="arch-component">管理员</div>
+                        <div class="arch-component">升学指导老师</div>
+                        <div class="arch-component">数据采集员</div>
+                        <div class="arch-component">学校领导</div>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>🌐 表现层 (Web 管理后台)</h4>
+                        <div class="arch-component">仪表盘</div>
+                        <div class="arch-component">采集队列管理</div>
+                        <div class="arch-component">录取数据管理</div>
+                        <div class="arch-component">统计分析</div>
+                        <div class="arch-component">系统设置</div>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>🔌 API 服务层</h4>
+                        <div class="arch-component">任务管理 API</div>
+                        <div class="arch-component">数据查询 API</div>
+                        <div class="arch-component">统计分析 API</div>
+                        <div class="arch-component">系统管理 API</div>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>⚙️ 业务逻辑层</h4>
+                        <div class="arch-component">OpenClaw 采集器</div>
+                        <div class="arch-component">数据提取器</div>
+                        <div class="arch-component">任务调度器</div>
+                        <div class="arch-component">数据验证器</div>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>💾 数据存储层</h4>
+                        <div class="arch-component">MySQL 数据库</div>
+                        <div class="arch-component">Redis 缓存</div>
+                        <div class="arch-component">文件存储</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2. 技术栈选型</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>组件</th>
+                            <th>技术选型</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>后端框架</strong></td>
+                            <td>FastAPI + Python 3.11+</td>
+                            <td>高性能异步框架，支持自动文档</td>
+                        </tr>
+                        <tr>
+                            <td><strong>任务队列</strong></td>
+                            <td>Redis + RQ</td>
+                            <td>轻量级队列，易于部署和维护</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据库（开发）</strong></td>
+                            <td>SQLite 3</td>
+                            <td>轻量级，无需配置，本地开发</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据库（生产）</strong></td>
+                            <td>MySQL 8.0+</td>
+                            <td>高性能，支持并发，线上部署</td>
+                        </tr>
+                        <tr>
+                            <td><strong>前端框架</strong></td>
+                            <td>Vue 3 + Element Plus</td>
+                            <td>组件丰富，开发效率高</td>
+                        </tr>
+                        <tr>
+                            <td><strong>实时推送</strong></td>
+                            <td>WebSocket</td>
+                            <td>实时任务进度推送</td>
+                        </tr>
+                        <tr>
+                            <td><strong>部署</strong></td>
+                            <td>Docker + Docker Compose</td>
+                            <td>容器化部署，便于迁移</td>
+                        </tr>
+                        <tr>
+                            <td><strong>反向代理</strong></td>
+                            <td>Nginx</td>
+                            <td>负载均衡，静态资源服务</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>3. 核心模块设计</h2>
+                
+                <h3>3.1 任务队列模块</h3>
+                <div class="card">
+                    <h4>设计要点</h4>
+                    <ul>
+                        <li>使用 Redis 作为任务队列存储</li>
+                        <li>支持优先级队列（1-10 级）</li>
+                        <li>实现任务状态机（待处理→处理中→完成/失败）</li>
+                        <li>支持失败重试（指数退避策略）</li>
+                        <li>支持定时任务调度</li>
+                    </ul>
+                </div>
+                <div class="code-block">
+# 任务队列示例代码
+from rq import Queue
+from redis import Redis
+
+redis_conn = Redis(host='localhost', port=6379)
+queue = Queue('admission_collection', connection=redis_conn)
+
+# 添加高优先级任务
+queue.enqueue(
+    process_article_task,
+    article_url='https://...',
+    task_id=1001,
+    priority='high'
+)
+
+# 后台 Worker 执行
+# rq worker admission_collection
+                </div>
+
+                <h3>3.2 OpenClaw 采集模块</h3>
+                <div class="card">
+                    <h4>工作流程</h4>
+                    <ol>
+                        <li>从任务队列获取待处理任务</li>
+                        <li>使用 curl 抓取微信文章 HTML</li>
+                        <li>解析 HTML 提取关键信息（标题、描述、正文）</li>
+                        <li>使用正则和 AI 提取结构化录取数据</li>
+                        <li>数据验证和清洗</li>
+                        <li>写入数据库</li>
+                        <li>更新任务状态</li>
+                    </ol>
+                </div>
+
+                <h3>3.3 数据提取模块</h3>
+                <div class="card">
+                    <h4>提取策略</h4>
+                    <ul>
+                        <li><strong>表格提取：</strong> 识别 HTML 表格，解析表头和数据行</li>
+                        <li><strong>文本提取：</strong> 正则匹配"X 同学录取 X 大学"模式</li>
+                        <li><strong>关键词提取：</strong> 识别奖学金、专业等关键词</li>
+                        <li><strong>AI 辅助：</strong> 对复杂格式使用 AI 理解提取</li>
+                    </ul>
+                </div>
+
+                <h3>3.4 数据验证模块</h3>
+                <div class="card">
+                    <h4>验证规则</h4>
+                    <ul>
+                        <li>必填字段检查（学生姓名、大学、年份）</li>
+                        <li>国家名称标准化（映射到标准国家表）</li>
+                        <li>分数合理性检查（TOEFL 0-120, SAT 400-1600）</li>
+                        <li>重复数据检测（学生 + 大学 + 年份唯一）</li>
+                        <li>数据完整度评分（1-5 分）</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>4. 数据库设计</h2>
+                <div class="info-box">
+                    <p><strong>核心表：</strong> 7 张主表 + 3 张辅助表</p>
+                    <p><strong>索引策略：</strong> 常用查询字段建立索引，复合索引优化组合查询</p>
+                    <p><strong>分区策略：</strong> 录取记录表按年份分区，提升查询性能</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>表名</th>
+                            <th>说明</th>
+                            <th>主要字段</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>admission_records</td>
+                            <td>录取记录表（核心）</td>
+                            <td>学生、大学、专业、奖学金等</td>
+                        </tr>
+                        <tr>
+                            <td>collection_tasks</td>
+                            <td>采集任务队列</td>
+                            <td>URL、状态、优先级、结果</td>
+                        </tr>
+                        <tr>
+                            <td>countries</td>
+                            <td>国家/地区表</td>
+                            <td>国家名、洲、地区</td>
+                        </tr>
+                        <tr>
+                            <td>universities</td>
+                            <td>大学信息表</td>
+                            <td>大学名、排名、类型</td>
+                        </tr>
+                        <tr>
+                            <td>source_schools</td>
+                            <td>来源学校表</td>
+                            <td>学校名、公众号、联系人</td>
+                        </tr>
+                        <tr>
+                            <td>admission_requirements</td>
+                            <td>录取条件详情</td>
+                            <td>GPA、语言、标化要求</td>
+                        </tr>
+                        <tr>
+                            <td>statistics_daily</td>
+                            <td>每日统计表</td>
+                            <td>日期、学校、统计数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>5. API 接口设计</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>接口</th>
+                            <th>方法</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>/api/tasks</td>
+                            <td>POST</td>
+                            <td>创建采集任务</td>
+                        </tr>
+                        <tr>
+                            <td>/api/tasks/batch-import</td>
+                            <td>POST</td>
+                            <td>批量导入任务（Excel）</td>
+                        </tr>
+                        <tr>
+                            <td>/api/tasks</td>
+                            <td>GET</td>
+                            <td>查询任务列表</td>
+                        </tr>
+                        <tr>
+                            <td>/api/tasks/{id}</td>
+                            <td>GET</td>
+                            <td>获取任务详情</td>
+                        </tr>
+                        <tr>
+                            <td>/api/records</td>
+                            <td>GET</td>
+                            <td>查询录取记录</td>
+                        </tr>
+                        <tr>
+                            <td>/api/records/{id}</td>
+                            <td>PUT</td>
+                            <td>更新录取记录</td>
+                        </tr>
+                        <tr>
+                            <td>/api/stats/overview</td>
+                            <td>GET</td>
+                            <td>获取总体统计</td>
+                        </tr>
+                        <tr>
+                            <td>/api/stats/by-country</td>
+                            <td>GET</td>
+                            <td>按国家统计</td>
+                        </tr>
+                        <tr>
+                            <td>/api/export/excel</td>
+                            <td>POST</td>
+                            <td>导出 Excel</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>6. 管理后台设计</h2>
+                <div class="card">
+                    <h4>页面列表</h4>
+                    <ul>
+                        <li><strong>仪表盘：</strong> 总体统计、实时数据、快捷操作</li>
+                        <li><strong>采集队列：</strong> 任务列表、批量操作、进度监控</li>
+                        <li><strong>录取数据：</strong> 数据查询、编辑、审核、导出</li>
+                        <li><strong>统计分析：</strong> 多维度图表、趋势分析、对比分析</li>
+                        <li><strong>系统设置：</strong> 用户管理、权限配置、系统参数</li>
+                    </ul>
+                </div>
+                <div class="highlight">
+                    <p><strong>关键交互：</strong></p>
+                    <p>• 批量导入：支持 Excel 拖拽上传，实时解析预览</p>
+                    <p>• 实时推送：WebSocket 推送任务进度，无需手动刷新</p>
+                    <p>• 高级筛选：多条件组合筛选，保存筛选方案</p>
+                    <p>• 数据导出：自定义导出字段，支持多种格式</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>7. 并发与性能</h2>
+                <div class="card">
+                    <h4>并发策略</h4>
+                    <ul>
+                        <li>任务队列支持多 Worker 并发处理</li>
+                        <li>数据库连接池管理（最大连接数 50）</li>
+                        <li>Redis 缓存热点数据（大学列表、国家列表）</li>
+                        <li>异步任务处理，不阻塞主线程</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>性能优化</h4>
+                    <ul>
+                        <li>数据库查询优化（索引、分页、避免 N+1）</li>
+                        <li>静态资源 CDN 加速</li>
+                        <li>前端懒加载和虚拟滚动</li>
+                        <li>统计数据预计算和缓存</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>8. 安全设计</h2>
+                <div class="info-box">
+                    <p><strong>认证：</strong> JWT Token 认证，支持刷新 Token</p>
+                    <p><strong>授权：</strong> RBAC 角色权限控制（管理员/普通用户）</p>
+                    <p><strong>审计：</strong> 操作日志记录，支持追溯</p>
+                    <p><strong>备份：</strong> 数据库每日自动备份，保留 30 天</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>9. 部署架构</h2>
+                <div class="architecture">
+                    <div class="arch-layer">
+                        <h4>🌐 生产环境</h4>
+                        <div class="arch-component">Nginx (反向代理)</div>
+                        <div class="arch-component">Backend API (Gunicorn + 4 Workers)</div>
+                        <div class="arch-component">RQ Worker (3 个并发)</div>
+                        <div class="arch-component">Frontend (Nginx 静态服务)</div>
+                    </div>
+                    <div class="arch-layer">
+                        <h4>💾 数据服务</h4>
+                        <div class="arch-component">MySQL 主从复制</div>
+                        <div class="arch-component">Redis Sentinel 高可用</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>文档版本：</strong> v1.0</p>
+            <p><strong>创建时间：</strong> 2026 年 3 月 18 日</p>
+            <p><strong>文档路径：</strong> 大学录取信息整理系统/设计方案/01-系统设计方案.html</p>
+            <p style="margin-top: 15px; color: #999; font-size: 12px;">本设计方案为初版，开发过程中可能调整优化。</p>
+        </div>
+    </div>
+</body>
+</html>

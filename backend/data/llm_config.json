@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "corrector_enabled": true,
+  "provider": "dashscope",
+  "api_base": "https://newapi.beiyou.org.cn/v1",
+  "api_key": "sk-Df27ROwppc1QI9aYiXhWV7L3JGAwjYzzESTu09J9dRLgMeZG",
+  "model": "qwen3.5-plus",
+  "max_tokens": 500,
+  "temperature": 0.1,
+  "batch_size": 10,
+  "timeout": 60
+}

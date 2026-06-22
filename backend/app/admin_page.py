@@ -1,0 +1,1483 @@
+HTML_CONTENT = '''<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>贝优 - 大学录取信息整理系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
+<script src="/backend-static/echarts.min.js"></script>
+<script src="/backend-static/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f5f6fa;--surface:#fff;--hover:#f0f1f5;--border:#e2e4ea;--border-dk:#d0d2da;--text:#1a1a2e;--text2:#5a5a78;--muted:#9090a8;--primary:#4f46e5;--primary-l:#eef2ff;--primary-d:#3730a3;--ok:#059669;--ok-bg:#ecfdf5;--warn:#d97706;--warn-bg:#fffbeb;--err:#dc2626;--err-bg:#fef2f2;--info:#0284c7;--info-bg:#f0f9ff;--r-sm:6px;--r-md:10px;--r-lg:14px;--sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 12px rgba(0,0,0,.08);--sh-lg:0 8px 30px rgba(0,0,0,.12);--font:"DM Sans",-apple-system,BlinkMacSystemFont,sans-serif;--serif:"Instrument Serif",Georgia,serif;--ease:cubic-bezier(.25,1,.5,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;display:flex}
+::selection{background:var(--primary-l);color:var(--primary-d)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--border-dk)}
+.sidebar{width:250px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sidebar-header{padding:24px 22px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-i{width:38px;height:38px;background:var(--primary);border-radius:var(--r-sm);display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px;flex-shrink:0}
+.logo-n{font-family:var(--serif);font-size:20px;color:var(--text);line-height:1.15}
+.logo-d{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.sidebar-nav{padding:16px 12px;flex:1;overflow-y:auto}
+.nav-sec{margin-bottom:24px}
+.nav-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;padding:0 10px 10px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);color:var(--text2);cursor:pointer;font-size:13.5px;font-weight:500;transition:all 150ms var(--ease);margin-bottom:2px;border:none;background:none;width:100%;text-align:left}
+.nav:hover{background:var(--hover);color:var(--text)}.nav.active{background:var(--primary);color:#fff}
+.nav svg{width:18px;height:18px;flex-shrink:0;opacity:.7}.nav.active svg{opacity:1}
+.badge-nav{margin-left:auto;background:var(--warn);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;line-height:1.5}
+.nav.active .badge-nav{background:rgba(255,255,255,.35)}
+.sidebar-f{padding:14px 22px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.main{flex:1;margin-left:250px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.pg-t{font-family:var(--serif);font-size:21px;font-weight:600}
+.pg-d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.top-a{display:flex;align-items:center;gap:8px}
+.content{padding:28px 32px;flex:1}
+.page{display:none}.page.active{display:block;animation:fadeUp 300ms var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.st{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;transition:all 200ms var(--ease)}
+.st:hover{border-color:var(--border-dk);box-shadow:var(--sh)}
+.st-l{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.st-v{font-size:26px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.st-n{font-size:11px;color:var(--muted);margin-top:2px}
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.srch{flex:1;min-width:180px;padding:9px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:var(--font);background:var(--surface);transition:border-color 150ms var(--ease)}
+.srch:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
+.sel{padding:9px 14px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:var(--font);background:var(--surface);cursor:pointer;min-width:110px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border:none;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all 150ms var(--ease);white-space:nowrap}
+.btn:active{transform:scale(.97)}.btn svg{width:15px;height:15px}
+.bp{background:var(--primary);color:#fff}.bp:hover{background:var(--primary-d)}
+.bs{background:var(--ok);color:#fff}.bs:hover{opacity:.9}
+.bd{background:var(--err);color:#fff}.bd:hover{opacity:.9}
+.bg{background:transparent;color:var(--text2);padding:8px 12px}.bg:hover{background:var(--bg);color:var(--text)}
+.bo{background:var(--surface);color:var(--text2);border:1px solid var(--border)}.bo:hover{border-color:var(--border-dk);background:var(--hover)}
+.sm{padding:6px 12px;font-size:12px}.btn:disabled{opacity:.5;cursor:not-allowed}
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;overflow-x:auto}
+.tw-h{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tw-t{font-weight:600;font-size:14px}.tw-i{font-size:12.5px;color:var(--muted)}
+.ts{max-height:500px;overflow-y:auto}.ts thead th{position:sticky;top:0;z-index:10}
+table{width:100%;border-collapse:collapse;min-width:100%}
+th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;background:var(--bg);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);word-break:break-all;max-width:150px}
+tr:hover td{background:var(--primary-l)}tr:last-child td{border-bottom:none}
+.b{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.b-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-w{background:var(--warn-bg);color:var(--warn)}.b-err{background:var(--err-bg);color:var(--err)}.b-n{background:var(--bg);color:var(--text2);border:1px solid var(--border)}.b-i{background:var(--info-bg);color:var(--info)}
+.pag{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border)}
+.pt{font-size:12.5px;color:var(--muted)}.pb{display:flex;gap:4px}
+.ch{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px}
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md)}
+.cc-h{padding:14px 18px;border-bottom:1px solid var(--border)}.cc-n{font-weight:600;font-size:13.5px}
+.cc-b{height:320px;padding:12px}
+.fb{display:flex;gap:6px;margin-bottom:14px}
+.fb-b{padding:5px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface);font-size:12px;font-weight:600;cursor:pointer;transition:all 150ms var(--ease);color:var(--text2)}
+.fb-b:hover{border-color:var(--border-dk)}.fb-b.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.mo.open{display:flex}
+.md{background:var(--surface);border-radius:var(--r-lg);width:92%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:var(--sh-lg);animation:mdIn 250ms var(--ease)}
+@keyframes mdIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.md-h{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.md-t{font-weight:600;font-size:15px}
+.md-x{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:var(--r-sm)}.md-x:hover{background:var(--bg);color:var(--text)}
+.md-b{padding:22px}.md-f{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.f{margin-bottom:14px}
+.f-l{display:block;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:5px}
+.f-h{font-size:11px;color:var(--muted);margin-top:3px}
+.inp,.ta{width:100%;padding:9px 13px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-family:var(--font);background:var(--surface);transition:border-color 150ms var(--ease)}
+.inp:focus,.ta:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
+.ta{resize:vertical;min-height:100px}
+.cks{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.ck{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background 100ms var(--ease)}
+.ck:hover{background:var(--bg)}.ck input{accent-color:var(--primary);width:15px;height:15px}
+.ck label{font-size:12.5px;cursor:pointer}
+.tst{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:6px}
+.t{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 18px;box-shadow:var(--sh-lg);font-size:13px;font-weight:500;animation:tIn 250ms var(--ease);min-width:260px}
+.t.ok{border-left:3px solid var(--ok)}.t.err{border-left:3px solid var(--err)}
+@keyframes tIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.em{text-align:center;padding:40px 20px}.em-i{font-size:36px;margin-bottom:12px;opacity:.4}
+.em-t{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}.em-d{font-size:12.5px;color:var(--muted)}
+.mob{display:none;background:none;border:none;padding:8px;cursor:pointer;color:var(--text)}.mob svg{width:22px;height:22px}
+@media(max-width:768px){.sidebar{transform:translateX(-100%);transition:transform 300ms var(--ease)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.content{padding:16px}.stats{grid-template-columns:repeat(2,1fr)}.ch{grid-template-columns:1fr}.mob{display:block!important}}
+
+/* ===== Excel 导入样式 ===== */
+.exl-btn{background:linear-gradient(135deg,#f0f4ff,#e8eeff);color:#4f46e5;border:1px solid #c7d2fe;padding:8px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s;cursor:pointer}
+.exl-btn:hover{background:linear-gradient(135deg,#e8eeff,#dde5ff);border-color:#a5b4fc}
+.exl-modal{max-width:440px!important}
+.exl-rules{background:linear-gradient(135deg,#f0f9ff,#e8f4fd);border:1px solid #bae6fd;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:1.8;color:#0369a1}
+.exl-rules strong{font-size:14px;display:block;margin-bottom:6px;color:#0c4a6e}
+.exl-rules b{color:#0369a1}
+.exl-drop-zone{border:2px dashed #c7d2fe;border-radius:14px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:linear-gradient(180deg,#fafbff,#f5f7ff)}
+.exl-drop-zone:hover,.exl-drop-zone.drag-over{border-color:#4f46e5;background:linear-gradient(180deg,#f0f4ff,#e8eeff)}
+.exl-drop-icon{display:flex;justify-content:center;margin-bottom:10px}
+.exl-drop-text{font-size:14px;color:var(--text2);margin-bottom:4px}
+.exl-drop-link{color:var(--primary);font-weight:600;text-decoration:underline}
+.exl-drop-hint{font-size:12px;color:var(--muted);margin-top:8px}
+.exl-prev-header{font-size:13px;color:var(--text2);margin-bottom:8px;padding:8px 12px;background:var(--ok-bg);border-radius:6px}
+.exl-tags{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:4px}
+.exl-tag{display:inline-flex;padding:4px 12px;background:var(--bg);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exl-badge{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.25);padding:1px 8px;border-radius:10px;font-size:12px;font-weight:700}
+.exl-footer{gap:8px}
+
+/* ===== 手动录入样式 ===== */
+.manual-entry-btn{background:linear-gradient(135deg,#4f46e5,#4338ca);color:#fff;border:none;padding:8px 16px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.manual-entry-btn:hover{background:linear-gradient(135deg,#4338ca,#3730a3);transform:translateY(-1px)}
+.me-required-hint{font-size:12px;color:var(--muted);margin-bottom:16px;padding:8px 12px;background:var(--bg);border-radius:6px;display:inline-flex;align-items:center;gap:6px}
+.me-req{color:#ef4444;font-weight:700}
+.me-req-dot{display:inline-block;width:6px;height:6px;background:#ef4444;border-radius:50%;margin-right:4px}
+.me-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.me-field{display:flex;flex-direction:column;gap:4px}
+.me-field label{font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px}
+.me-field input,.me-field select,.me-field textarea{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg);transition:border-color .15s}
+.me-field input:focus,.me-field select:focus,.me-field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}
+.me-field input:required:invalid,.me-field select:required:invalid{border-color:#fca5a5}
+.me-field input.error,.me-field select.error{border-color:#ef4444;background:#fef2f2}
+
+.ck-req{background:#f8fafc;border-radius:6px;padding:8px 12px;border-left:3px solid var(--primary)}
+.ck-req input{opacity:0.6;cursor:not-allowed}
+.req-dot{color:#ef4444;font-size:11px;font-weight:600;background:#fef2f2;padding:1px 6px;border-radius:10px}
+
+/* Manual Entry Styles */
+.me-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.me-field{display:flex;flex-direction:column;gap:4px}
+.me-field label{font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px}
+.me-field input,.me-field select,.me-field textarea{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;transition:border-color 200ms,box-shadow 200ms}
+.me-field input:focus,.me-field select:focus,.me-field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,0.1)}
+.me-field input:required:invalid,.me-field select:required:invalid{border-color:#fca5a5}
+.me-field input.error,.me-field select.error{border-color:#ef4444;background:#fef2f2}
+.me-req{color:#ef4444;font-weight:700}
+.me-req-dot{display:inline-block;width:6px;height:6px;background:#ef4444;border-radius:50%;margin-right:4px}
+
+.model-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:var(--primary-l);color:var(--primary-d);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.model-badge.empty{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.recog-zone{border:2px dashed var(--border-dk);border-radius:var(--r-md);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);margin-bottom:16px}
+.recog-zone:hover,.recog-zone.drag-over{border-color:var(--primary);background:var(--primary-l)}
+.recog-zone-icon{margin-bottom:10px;color:var(--primary);opacity:.7}
+.recog-zone-text{font-size:14px;color:var(--text2);margin-bottom:4px}
+.recog-zone-hint{font-size:12px;color:var(--muted)}
+.recog-preview{position:relative;display:inline-block;margin:12px auto;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border);max-width:100%}
+.recog-preview img{display:block;max-width:100%;max-height:280px}
+.recog-preview-remove{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;display:grid;place-items:center;font-size:14px}
+.recog-results{max-height:360px;overflow-y:auto;margin-top:12px}
+.recog-result-item{padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:8px;background:var(--bg);transition:all .15s}
+.recog-result-item:hover{border-color:var(--primary);background:var(--primary-l)}
+.recog-result-name{font-weight:600;font-size:14px;color:var(--text)}
+.recog-result-detail{font-size:12px;color:var(--text2);margin-top:2px}
+.recog-model-select{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.recog-model-card{padding:10px 12px;border:2px solid var(--border);border-radius:var(--r-sm);cursor:pointer;transition:all .15s;background:var(--surface)}
+.recog-model-card:hover{border-color:var(--primary)}
+.recog-model-card.selected{border-color:var(--primary);background:var(--primary-l)}
+.recog-model-card-name{font-weight:600;font-size:13px;color:var(--text)}
+.recog-model-card-provider{font-size:11px;color:var(--muted);margin-top:2px}
+.recog-model-card-desc{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4}
+.recog-model-card .free-tag{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:700;background:var(--ok-bg);color:var(--ok);margin-top:4px}
+.recog-model-card .rec-tag{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:700;background:var(--warn-bg);color:var(--warn);margin-top:4px}
+</style></head><body>
+<aside class="sidebar" id="sb"><div class="sidebar-header"><a href="/" class="logo"><div class="logo-i">贝</div><div><div class="logo-n">贝优</div><div class="logo-d">Admission System</div></div></a></div>
+<nav class="sidebar-nav"><div class="nav-sec"><div class="nav-lbl">数据管理</div>
+<button class="nav active" onclick="go('records')" data-p="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>录取记录</span></button>
+<button class="nav" onclick="go('tasks')" data-p="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>任务队列</span></button>
+<button class="nav" onclick="go('review')" data-p="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>数据审核</span><span class="badge-nav" id="rBadge">0</span></button>
+</div><div class="nav-sec"><div class="nav-lbl">数据分析</div>
+<button class="nav" onclick="go('stats')" data-p="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>统计分析</span></button>
+</div><div class="nav-sec"><div class="nav-lbl">后台监控</div>
+<button class="nav" onclick="go('users')" data-p="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg><span>用户管理</span></button>
+<button class="nav" onclick="go('system')" data-p="system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg><span>系统管理</span></button>
+</div><div class="nav-sec" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+<button class="nav" onclick="doLogout()" style="color:var(--err)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>退出登录</span></button>
+<button class="nav" onclick="openSwitchModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>切换账号</span></button>
+</div></nav><div class="sidebar-f">v2.0 · 贝优教育科技</div></aside>
+<div class="main"><div class="topbar"><div style="display:flex;align-items:center;gap:10px">
+<button class="mob" onclick="document.getElementById('sb').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+<div><div class="pg-t" id="pgT">录取记录</div><div class="pg-d" id="pgD">浏览和管理所有录取数据</div></div></div>
+<div class="top-a"><button class="btn bo sm" onclick="refresh()" id="rBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>刷新</button></div></div>
+<div class="content">
+<div class="page active" id="p-records"><div class="toolbar">
+<input type="text" style="display:none">
+<input type="password" style="display:none">
+<input class="srch" id="sI" type="text" placeholder="搜索学生姓名、大学、专业..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+<select class="sel" id="cF" onchange="loadRec()"><option value="">全部国家</option><option value="美国">美国</option><option value="英国">英国</option><option value="加拿大">加拿大</option><option value="澳大利亚">澳大利亚</option><option value="新加坡">新加坡</option><option value="香港">香港</option><option value="马来西亚">马来西亚</option><option value="其他">其他</option></select>
+<select class="sel" id="yF" onchange="loadRec()"><option value="">全部年份</option><option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option></select>
+<button class="btn bp sm" onclick="loadRec()">搜索</button><button class="btn bg sm" onclick="resetS()">重置</button>
+
+<button class="btn bo sm" onclick="openFld()">字段设置</button><button class="btn bo sm" onclick="openManualEntry()">手动录入</button><button class="btn bo sm" onclick="openMod('expMod')">导出</button><button class="btn bd sm" id="bDel" style="display:none" onclick="batchDel()">批量删除</button></div><div class="tw"><div class="tw-h"><div class="tw-t">录取记录</div><div class="tw-i" id="rCnt">0 条</div></div>
+<div class="ts"><table><thead><tr><th style="width:36px"><input type="checkbox" id="rAll" onchange="togRAll()"></th><th style="width:50px">ID</th><th>学生姓名</th><th>数据来源</th><th>国家</th><th>录取大学</th><th>专业</th><th>录取类型</th><th>录取状态</th><th>年份</th><th>奖学金</th><th>识别模型</th><th style="width:200px">操作</th></tr></thead><tbody id="tB"></tbody></table></div>
+<div class="pag"><span class="pt" id="pI">-</span><div class="pb"><button class="btn bo sm" id="pP" onclick="chgP(-1)">上一页</button><button class="btn bo sm" id="pN" onclick="chgP(1)">下一页</button></div></div></div></div>
+<div class="page" id="p-tasks"><div style="display:flex;gap:8px;margin-bottom:16px">
+<button class="btn bp" onclick="openTskMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>新建任务</button>
+<button class="btn bs" onclick="execAll()">执行全部</button>
+<button class="btn bs" id="bExecSel" style="display:none" onclick="execSel()">执行选中</button>
+<button class="btn bd" id="bDelTsk" style="display:none" onclick="batchDelTsk()">删除选中</button>
+<button class="btn bo" id="schedBtn" onclick="openSchedMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>定时采集</button>
+<button class="btn bo" onclick="openConcMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>并发设置</button></div>
+<div class="tw"><div class="tw-h"><div class="tw-t">采集任务</div><div class="tw-i" id="tCnt">0 个</div></div>
+<div class="ts"><table><thead><tr><th style="width:36px"><input type="checkbox" id="tAll" onchange="togTAll()"></th><th>ID</th><th>URL</th><th>标题</th><th>优先级</th><th>状态</th><th>记录数</th><th>识别模型</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="tT"></tbody></table></div>
+<div class="pag"><span class="pt" id="tPagI">-</span><div class="pb"><button class="btn bo sm" id="tPagP" onclick="chgTskP(-1)">上一页</button><button class="btn bo sm" id="tPagN" onclick="chgTskP(1)">下一页</button></div></div></div></div>
+<div class="page" id="p-review"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+<div class="fb"><button class="fb-b active" onclick="setRF('pending',this)">待审核</button><button class="fb-b" onclick="setRF('approved',this)">已通过</button><button class="fb-b" onclick="setRF('rejected',this)">已拒绝</button><button class="fb-b" onclick="setRF('all',this)">全部</button></div>
+<div style="display:flex;gap:6px"><button class="btn bo sm" onclick="openReviewFld()">字段设置</button><button class="btn bs sm" id="bApp" style="display:none" onclick="batchR('approve')">批量通过</button><button class="btn bd sm" id="bRej" style="display:none" onclick="batchR('reject')">批量拒绝</button></div></div>
+<div class="tw"><div class="ts"><table><thead id="rTH"></thead><tbody id="rT"></tbody></table></div>
+<div class="pag" id="rPag" style="display:none"><span class="pt" id="rPagInfo"></span><div class="pb">
+<button class="btn bo sm" id="rPrev" onclick="rPg(-1)">上一页</button>
+<span id="rPgNum" style="padding:0 8px;font-size:13px;font-weight:600"></span>
+<button class="btn bo sm" id="rNext" onclick="rPg(1)">下一页</button>
+</div></div>
+</div></div>
+<div class="page" id="p-stats"><div class="stats" id="sG">
+<div class="st"><div class="st-l">总记录数</div><div class="st-v" id="sT">-</div><div class="st-n">持续收集中</div></div>
+<div class="st"><div class="st-l">覆盖国家</div><div class="st-v" id="sC">-</div><div class="st-n">留学目的地</div></div>
+<div class="st"><div class="st-l">收录大学</div><div class="st-v" id="sU">-</div><div class="st-n">全球院校</div></div>
+<div class="st"><div class="st-l">奖学金总额</div><div class="st-v" id="sK">-</div><div class="st-n" id="sTN">待执行</div></div>
+</div><div class="ch">
+<div class="cc"><div class="cc-h"><div class="cc-n">国家分布</div></div><div class="cc-b" id="cC"></div></div>
+<div class="cc"><div class="cc-h"><div class="cc-n">大学 TOP10</div></div><div class="cc-b" id="cU"></div></div>
+<div class="cc"><div class="cc-h"><div class="cc-n">年度趋势</div></div><div class="cc-b" id="cR"></div></div>
+<div class="cc"><div class="cc-h"><div class="cc-n">专业分布</div></div><div class="cc-b" id="cM"></div></div>
+</div></div>
+
+<!-- ==================== 用户管理页面 ==================== -->
+<div class="page" id="p-users">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<div><h3 style="margin:0 0 4px;font-size:16px">👥 用户管理</h3><p style="margin:0;font-size:13px;color:var(--muted)">管理系统用户账号和权限</p></div>
+<button class="btn bp" onclick="openAddUserMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>添加账号</button>
+</div>
+<div class="tw"><div class="tw-h"><div class="tw-t">用户列表</div><div class="tw-i" id="uCnt">0 人</div></div>
+<div class="ts"><table><thead><tr><th>ID</th><th>用户名</th><th>姓名</th><th>邮箱</th><th>角色</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead><tbody id="uTb"></tbody></table></div>
+</div></div>
+
+<!-- ==================== 系统管理页面 ==================== -->
+<div class="page" id="p-system">
+<div style="display:flex;gap:12px;margin-bottom:16px">
+<button class="btn bp" onclick="showSysTab('logs')" id="sysTabLogs">📋 日志查看</button>
+<button class="btn bg" onclick="showSysTab('backup')" id="sysTabBackup">💾 备份设置</button>
+</div>
+<div id="sysLogsTab">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+<div><h3 style="margin:0 0 4px;font-size:16px">📋 操作日志</h3><p style="margin:0;font-size:13px;color:var(--muted)">记录所有用户的操作行为</p></div>
+<div style="display:flex;gap:8px">
+<input class="srch" id="logSearch" type="text" placeholder="搜索用户名..." style="width:180px" onkeyup="if(event.key==='Enter')loadLogs()">
+<select class="sel" id="logType" onchange="loadLogs()" style="width:120px"><option value="">全部类型</option><option value="create_user">创建用户</option><option value="delete_record">删除记录</option><option value="update_record">更新记录</option><option value="batch_delete">批量删除</option><option value="login">登录</option><option value="backup">备份</option></select>
+<button class="btn bp sm" onclick="loadLogs()">刷新</button>
+</div>
+</div>
+<div class="tw"><div class="tw-h"><div class="tw-t">操作日志</div><div class="tw-i" id="logCnt">0 条</div></div>
+<div class="ts"><table><thead><tr><th>ID</th><th>用户</th><th>操作类型</th><th>描述</th><th>IP 地址</th><th>时间</th><th>操作</th></tr></thead><tbody id="logTb"></tbody></table></div>
+<div class="pag"><span class="pt" id="logPg">-</span><div class="pb"><button class="btn bo sm" id="logPrev" onclick="loadLogs(-1)">上一页</button><button class="btn bo sm" id="logNext" onclick="loadLogs(1)">下一页</button></div></div>
+</div>
+</div>
+<div id="sysBackupTab" style="display:none">
+<div style="max-width:600px">
+<div style="padding:20px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border);margin-bottom:16px">
+<h4 style="margin:0 0 12px;font-size:15px">💾 自动备份设置</h4>
+<div style="display:grid;gap:12px">
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">备份间隔（天）</label><input type="number" id="bkInterval" value="7" min="1" max="365" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"></div>
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">时间跨度（天）</label><input type="number" id="bkSpan" value="30" min="1" max="365" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"><p style="font-size:12px;color:var(--muted);margin-top:4px">备份时保存从此时间点往前多少天的数据</p></div>
+<div><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="bkAuto"> 启用自动备份</label></div>
+<div style="display:flex;gap:8px"><button class="btn bp" onclick="saveBackupSettings()">保存设置</button><button class="btn bs" onclick="manualBackup()">立即备份</button></div>
+</div></div>
+<div style="padding:16px;background:var(--surface);border-radius:var(--r-md);border:1px solid var(--border)">
+<h4 style="margin:0 0 8px;font-size:14px">📊 备份状态</h4>
+<p style="font-size:13px;color:var(--muted);margin:0">上次备份：<span id="bkLast">未备份</span></p>
+<p style="font-size:13px;color:var(--muted);margin:4px 0 0">当前日志数量：<span id="bkLogCnt">-</span></p>
+</div></div></div>
+</div>
+
+<div class="tst" id="tst"></div>
+<script>
+const A='/api';let pg=1,ps=20,tot=0,rpg=1,rps=20,rf='pending',rS=[],tpg=1,tps=50,tTot=0;
+const fc={student_name_cn:true,country:true,university_cn:true,major_cn:true,admission_type:true,admission_status:true,admission_year:true,scholarship:true,student_name_en:false,university_en:false,major_en:false,updated_at:false,data_source:true};
+try{let saved=localStorage.getItem('fc');if(saved){Object.assign(fc,JSON.parse(saved))}}catch(e){}
+const fN={student_name_cn:'学生姓名',country:'国家',university_cn:'录取大学',major_cn:'专业',admission_type:'录取类型',admission_status:'录取状态',admission_year:'年份',scholarship:'奖学金',student_name_en:'学生姓名(英文)',university_en:'录取大学(英文)',major_en:'专业(英文)',updated_at:'更新时间',data_source:'数据来源'};
+const fR=['student_name_cn','university_cn']; // required fields
+const rfc={student_name_cn:true,university_cn:true,major_cn:true,country:true,created_at:true,student_name_en:false,admission_year:false,scholarship_amount:false,scholarship_currency:false,article_url:false,article_title:false,review_comment:false,reviewed_by:false,reviewed_at:false,data_quality:false,updated_at:false,promoted_at:false,data_source:true};try{let saved=localStorage.getItem('rfc');if(saved){Object.assign(rfc,JSON.parse(saved))}}catch(e){}
+const rfN={student_name_cn:'学生姓名',university_cn:'录取大学',major_cn:'专业',country:'国家',created_at:'提交时间',student_name_en:'学生姓名(英文)',admission_year:'录取年份',scholarship_amount:'奖学金金额',scholarship_currency:'奖学金币种',article_url:'文章链接',article_title:'文章标题',review_comment:'审核备注',reviewed_by:'审核人',reviewed_at:'审核时间',data_quality:'数据质量',updated_at:'更新时间',promoted_at:'迁入时间',data_source:'数据来源'};
+const rfR=['student_name_cn','university_cn','review_status'];
+const pI={records:['录取记录','浏览和管理所有录取数据'],tasks:['任务队列','采集任务管理与执行'],review:['数据审核','审核录入数据的准确性'],stats:['统计分析','数据概览与多维度分析'],users:['用户管理','管理系统用户账号和权限'],system:['系统管理','日志查看、备份设置']};
+
+// 权限定义：每个页面允许的角色ID列表（角色ID: 1=系统管理员, 2=数据管理员, 3=普通用户, 4=采集操作员）
+const PAGE_PERMS={records:[1,2,3,4],tasks:[1,2,4],review:[1,2],stats:[1,2,3,4],users:[1],system:[1]};
+
+function getUserRoleId(){
+  try{let u=JSON.parse(localStorage.getItem('user')||'{}');if(u.role_id)return u.role_id;let rn=u.role||u.role_name||'';if(rn==='super_admin')return 1;if(rn==='data_admin')return 2;if(rn==='collection_operator')return 4;return 3}catch(e){return 3}
+}
+
+function checkPerm(t){
+  let rid=getUserRoleId();
+  if(rid===1)return true; // 系统管理员全部权限
+  let allowed=PAGE_PERMS[t];
+  return allowed&&allowed.includes(rid);
+}
+
+async function go(t){
+  if(!checkPerm(t)){toast('权限不足，请联系管理员开通此模块权限',false);return}
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('active'));
+  let b=document.querySelector(`.nav[data-p="${t}"]`);if(b)b.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  let e=document.getElementById('p-'+t);if(e)e.classList.add('active');
+  let i=pI[t];if(i){document.getElementById('pgT').textContent=i[0];document.getElementById('pgD').textContent=i[1]}
+  if(t==='records')loadRec();if(t==='tasks'){loadTsk()};if(t==='review')loadRev();if(t==='stats')loadSt();if(t==='users')loadUsers();if(t==='system'){showSysTab('logs');loadLogs();loadBackupSettings();}
+  if(window.innerWidth<768)document.getElementById('sb').classList.remove('open');
+}
+function openMod(id){document.getElementById(id).classList.add('open')}
+function closeMod(id){document.getElementById(id).classList.remove('open')}
+
+function toast(m,ok=true,persist=false){
+  let c=document.getElementById('tst'),t=document.createElement('div');
+  t.className='t '+(ok?'ok':'err');t.textContent=m;let id='t_'+Date.now();t.id=id;c.appendChild(t);
+  if(!persist)setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(16px)';t.style.transition='all 200ms';setTimeout(()=>t.remove(),200)},3000);
+  return id;
+}
+function removeToast(id){
+  let t=document.getElementById(id);
+  if(t){t.style.opacity='0';t.style.transform='translateX(16px)';t.style.transition='all 200ms';setTimeout(()=>t.remove(),200)}
+}
+
+async function refresh(){
+  let b=document.getElementById('rBtn');b.disabled=true;
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>刷新中';
+  let a=document.querySelector('.nav.active')?.dataset.p||'records';
+  if(a==='records')loadRec();else if(a==='tasks')loadTsk();else if(a==='review')loadRev();else if(a==='stats')loadSt();
+  b.disabled=false;
+  b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>刷新';
+  toast('数据已更新');
+}
+
+/* ===== RECORDS ===== */
+async function loadRec(){
+  try{let p=new URLSearchParams({page:pg,page_size:ps}),s=document.getElementById('sI').value.trim(),c=document.getElementById('cF').value,y=document.getElementById('yF').value;
+  if(s)p.append('search',s);if(c)p.append('country',c);if(y)p.append('year',y);
+  let r=await fetch(A+'/records?'+p),d=await r.json();tot=d.total||0;renderT(d.records||[]);renderP();
+  }catch(e){document.getElementById('tB').innerHTML='<tr><td colspan="13"><div class="em"><div class="em-i">⚠️</div><div class="em-t">加载失败</div><div class="em-d">请检查网络连接</div></div></td></tr>'}
+}
+function renderT(recs){
+  let b=document.getElementById('tB');
+  let hr=[{k:'student_name_cn',l:'学生姓名'},{k:'data_source',l:'数据来源'},{k:'country',l:'国家'},{k:'university_cn',l:'录取大学'},{k:'major_cn',l:'专业'},{k:'admission_type',l:'录取类型'},{k:'admission_status',l:'录取状态'},{k:'admission_year',l:'年份'},{k:'scholarship',l:'奖学金'}].filter(x=>fc[x.k]);
+  document.getElementById('rCnt').textContent=tot+' 条';
+  if(!recs.length){b.innerHTML='<tr><td colspan="13"><div class="em"><div class="em-i">📋</div><div class="em-t">暂无数据</div><div class="em-d">创建采集任务开始收集</div></div></td></tr>';document.getElementById('bDel').style.display='none';return}
+  let fieldKeys=['student_name_cn','data_source','country','university_cn','major_cn','admission_type','admission_status','admission_year','scholarship'];
+  let ths=document.querySelectorAll('#p-records thead th');
+  let fixedCols=2;
+  fieldKeys.forEach((k,i)=>{let th=ths[fixedCols+i];if(th)th.style.display=fc[k]?'':'none'});
+  b.innerHTML=recs.map(r=>{
+    let cs=fieldKeys.map(k=>{
+      let v=k==='scholarship'?(r.scholarship_amount?'$'+r.scholarship_amount:'<span style="color:var(--muted)">-</span>'):(r[k]||'<span style="color:var(--muted)">-</span>');
+      return '<td style="display:'+(fc[k]?'':'none')+'">'+v+'</td>';
+    }).join('');
+    let model=r.recognition_model||'';
+    let modelBadge=model?'<td><span class="model-badge" title="'+model+'">'+model+'</span></td>':'<td><span class="model-badge empty">-</span></td>';
+    return '<tr><td><input type="checkbox" class="rcb" data-id="'+r.id+'" onchange="updSel()"></td><td>'+r.id+'</td>'+cs+modelBadge+'<td><button class="btn bp sm" onclick="viewDetail('+r.id+')" style="margin-right:4px">详情</button><button class="btn bo sm" onclick="editR('+r.id+')">编辑</button> <button class="btn bd sm" onclick="delR('+r.id+')">删除</button></td></tr>';
+  }).join('');
+  document.getElementById('rAll').checked=false;updSel();
+}
+
+function updSel(){let cks=document.querySelectorAll('#tB .rcb:checked');document.getElementById('bDel').style.display=cks.length?'inline-flex':'none';document.getElementById('rAll').checked=cks.length>0&&cks.length===document.querySelectorAll('#tB .rcb').length}
+function togRAll(){let ck=document.getElementById('rAll').checked;document.querySelectorAll('#tB .rcb').forEach(c=>{c.checked=ck});updSel()}
+async function batchDel(){
+  let ids=Array.from(document.querySelectorAll('#tB .rcb:checked')).map(c=>parseInt(c.dataset.id));
+  if(!ids.length){toast('请先勾选记录',false);return}
+  if(!confirm('确定删除 '+ids.length+' 条记录？此操作不可恢复！'))return;
+  // 弹出账号密码验证
+  let username=prompt('请输入管理员账号：');
+  if(!username)return;
+  let password=prompt('请输入密码：');
+  if(!password)return;
+  // 验证账号密码
+  try{
+    let vr=await fetch(A+'/verify-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username,password:password})});
+    let vd=await vr.json();
+    if(!vr.ok){toast(vd.detail||'验证失败',false);return}
+  }catch(e){toast('验证失败: '+e.message,false);return}
+  // 验证通过，执行删除
+  try{
+    let r=await fetch(A+'/records/batch',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_ids:ids,confirm:true})}),d=await r.json();
+    if(r.ok){toast('成功删除 '+ids.length+' 条记录');loadRec()}
+    else toast(d.detail||'删除失败',false)
+  }catch(e){toast('删除失败: '+e.message,false)}
+}
+function renderP(){let tp=Math.ceil(tot/ps)||1;document.getElementById('pI').textContent='第 '+pg+'/'+tp+' 页，共 '+tot+' 条';document.getElementById('pP').disabled=pg<=1;document.getElementById('pN').disabled=pg>=tp}
+function chgP(d){pg+=d;loadRec()}
+function resetS(){document.getElementById('sI').value='';document.getElementById('cF').value='';document.getElementById('yF').value='';pg=1;loadRec()}
+async function editR(id){
+  openMod('editMod');
+  let c=document.getElementById('editContent');
+  c.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">加载中...</div>';
+  try{
+    let r=await fetch(A+'/records/'+id),d=await r.json();
+    if(!r.ok){c.innerHTML='<div style="padding:24px;text-align:center;color:var(--err)">加载失败</div>';return}
+    let rec=d;
+    let fields=[
+      ['student_name_cn','学生姓名(中)','text'],['student_name_en','学生姓名(英)','text'],
+      ['student_grade','年级','text'],['country','国家','text'],['country_en','国家(英)','text'],
+      ['university_cn','大学名称(中)','text'],['university_en','大学名称(英)','text'],
+      ['university_type','大学类型','select',['综合大学','文理学院','社区学院','私立大学','公立大学','其他']],
+      ['university_ranking','大学排名(US News)','number'],['major_cn','专业(中)','text'],
+      ['major_en','专业(英)','text'],['major_category','专业类别','select',['理工科','文科','商科','艺术','医学','法律','教育','其他']],
+      ['admission_type','录取类型','select',['本科','硕士','博士','交换生','语言班','预科','其他']],
+      ['admission_status','录取状态','select',['已录取','待确认','已拒绝','已入学','已延期']],
+      ['conditional_offer','有条件录取','select',['是','否']],['admission_date','录取日期','date'],
+      ['admission_year','录取年份','number'],['language_requirement_type','语言要求类型','select',['TOEFL','IELTS','Duolingo','SAT','无需语言成绩','其他']],
+      ['language_score_required','语言分数要求','number'],['sat_required','SAT要求','select',['是','否']],
+      ['scholarship_amount','奖学金金额','number'],['scholarship_currency','奖学金币种','select',['USD','GBP','EUR','CNY','AUD','CAD','其他']],
+      ['scholarship_type','奖学金类型','select',['全奖','半奖','部分奖学金','无奖学金']],
+      ['data_source','数据来源','text'],['article_title','文章标题','text'],
+      ['article_url','文章链接','url'],['review_status','审核状态','select',['pending','approved','rejected']],
+      ['notes','备注','textarea']
+    ];
+    let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    fields.forEach(([k,label,type,opts])=>{
+      let val=rec[k]||'';
+      let isFull=(k==='student_name_cn'||k==='university_cn'||k==='notes');
+      let gc=isFull?'grid-column:span 2':'';
+      let input='';
+      if(type==='select'&&opts){
+        input='<select id="e_'+k+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)">'+
+          opts.map(o=>'<option value="'+o+'"'+(String(val)===String(o)?' selected':'')+'>'+o+'</option>').join('')+'</select>';
+      }else if(type==='textarea'){
+        input='<textarea id="e_'+k+'" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)">'+val+'</textarea>';
+      }else{
+        input='<input type="'+type+'" id="e_'+k+'" value="'+val+'" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)">';
+      }
+      html+='<div style="'+gc+'"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:3px">'+label+'</label>'+input+'</div>';
+    });
+    html+='</div>';
+    c.innerHTML=html;
+    window._editId=id;
+  }catch(e){c.innerHTML='<div style="padding:24px;text-align:center;color:var(--err)">加载失败: '+e.message+'</div>'}
+}
+async function saveEdit(){
+  let id=window._editId;if(!id){toast('请先加载记录',false);return}
+  let fields=['student_name_cn','student_name_en','student_grade','country','country_en',
+    'university_cn','university_en','university_type','university_ranking','major_cn',
+    'major_en','major_category','admission_type','admission_status','conditional_offer',
+    'admission_date','admission_year','language_requirement_type','language_score_required',
+    'sat_required','scholarship_amount','scholarship_currency','scholarship_type',
+    'data_source','article_title','article_url','review_status','notes'];
+  let data={};
+  fields.forEach(k=>{let el=document.getElementById('e_'+k);if(el)data[k]=el.value});
+  // Convert numeric fields
+  ['university_ranking','admission_year','language_score_required','scholarship_amount'].forEach(k=>{
+    if(data[k]==='')data[k]=null;else data[k]=parseFloat(data[k])||0;
+  });
+  ['conditional_offer','sat_required'].forEach(k=>{
+    data[k]=(data[k]==='是'||data[k]==='1')?1:0;
+  });
+  try{
+    let r=await fetch(A+'/records/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(r.ok){toast('保存成功');closeMod('editMod');loadRec()}
+    else{let d=await r.json().catch(()=>({}));toast(d.detail||'保存失败',false)}
+  }catch(e){toast('保存失败: '+e.message,false)}
+}
+async function delR(id){if(!confirm('确定删除？'))return;try{let r=await fetch(A+'/records/'+id,{method:'DELETE'});if(r.ok){toast('删除成功');loadRec()}else toast('删除失败',false)}catch(e){toast('失败',false)}}
+
+/* ===== FIELDS ===== */
+function openFld(){
+  let h='';
+  Object.keys(fc).forEach(k=>{
+    let isReq=fR.includes(k);
+    let label=fN[k]||k;
+    if(isReq){
+      h+='<div class="ck ck-req"><input type="checkbox" id="f-'+k+'" checked disabled><label for="f-'+k+'">'+label+' <span class="req-dot">必填</span></label></div>';
+    }else{
+      h+='<div class="ck"><input type="checkbox" id="f-'+k+'"'+(fc[k]?' checked':'')+'><label for="f-'+k+'">'+label+'</label></div>';
+    }
+  });
+  document.getElementById('fC').innerHTML=h;
+  openMod('fldMod')
+}
+function saveFld(){
+  Object.keys(fc).forEach(k=>{
+    if(fR.includes(k))return; // skip required fields
+    fc[k]=document.getElementById('f-'+k).checked;
+  });
+  localStorage.setItem('fc',JSON.stringify(fc));
+  closeMod('fldMod');loadRec();toast('已保存')
+}
+
+function openReviewFld(){
+  let h='';
+  Object.keys(rfc).forEach(k=>{
+    let label=rfN[k]||k;
+    if(rfR.includes(k)){
+      h+='<div class="ck ck-req"><input type="checkbox" id="rf-'+k+'" checked disabled><label for="rf-'+k+'">'+label+' <span class="req-dot">必选</span></label></div>';
+    }else{
+      h+='<div class="ck"><input type="checkbox" id="rf-'+k+'"'+(rfc[k]?' checked':'')+'><label for="rf-'+k+'">'+label+'</label></div>';
+    }
+  });
+  document.getElementById('rfC').innerHTML=h;
+  openMod('reviewFldMod')
+}
+function saveReviewFld(){
+  Object.keys(rfc).forEach(k=>{
+    if(rfR.includes(k))return;
+    rfc[k]=document.getElementById('rf-'+k).checked;
+  });
+  localStorage.setItem('rfc',JSON.stringify(rfc));
+  closeMod('reviewFldMod');loadRev();toast('已保存')
+}
+
+/* ===== EXPORT ===== */
+async function exportD(fmt){
+  closeMod('expMod');try{let f=Object.keys(fc).filter(k=>fc[k]),r=await fetch(A+'/records/export/'+fmt,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})});
+  if(r.ok){let b=await r.blob(),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='录取数据.'+(fmt==='excel'?'xlsx':fmt);a.click();toast('导出成功')}else toast('导出失败',false)}catch(e){toast('导出失败',false)}
+}
+
+/* ===== TASKS ===== */
+// ===== 手动录入功能 =====
+function openManualEntry(){
+  // 重置表单
+  ['me_name','me_source','me_uni','me_country','me_major','me_year','me_scholarship','me_currency','me_notes','me_url','me_title'].forEach(id=>{
+    let el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('me_type').selectedIndex=0;
+  document.getElementById('me_status').selectedIndex=0;
+  openMod('manualMod');
+}
+
+
+
+
+async function loadTsk(pg2){
+  if(typeof pg2==='number')tpg=pg2;
+  try{let r=await fetch(A+'/collection-tasks?page='+tpg+'&page_size='+tps),d=await r.json();let tk=d.tasks||[];tTot=d.total||0;document.getElementById('tCnt').textContent=tTot+' 个';
+  let b=document.getElementById('tT');if(!tk.length){b.innerHTML='<tr><td colspan="10"><div class="em"><div class="em-i">⚡</div><div class="em-t">暂无任务</div><div class="em-d">点击"新建任务"开始采集</div></div></td></tr>';document.getElementById('tPagI').textContent='-';return}
+  let sm={0:'待处理',1:'待处理',2:'处理中',3:'已完成',4:'失败',5:'已终止'},sc={0:'b-w',1:'b-w',2:'b-i',3:'b-ok',4:'b-err',5:'b-term'};
+  b.innerHTML=tk.map(t=>{let u=t.article_url||t.url||'-';if(u.length>50)u=u.substring(0,50)+'...';
+  let statusLabel=sm[t.task_status]||'未知';
+  let retryInfo='';
+  if(t.retry_count>0&&t.task_status===4){
+    retryInfo='<br><span style="font-size:11px;color:var(--muted)">已重试 '+t.retry_count+'/'+(t.max_retry||3)+' 次</span>';
+  }
+  if(t.retry_count>0&&t.task_status===0){
+    retryInfo='<br><span style="font-size:11px;color:var(--warn)">重试中 ('+t.retry_count+'/'+(t.max_retry||3)+')</span>';
+  }
+  let errMsg='';
+  if(t.error_message&&t.task_status===4){
+    let msg=t.error_message.substring(0,30);
+    errMsg='<br><span style="font-size:11px;color:var(--err)" title="'+(t.error_message||'')+'">⚠ '+msg+'...</span>';
+  }
+  let pv=t.priority||3;let pc=pv<=2?'var(--ok)':pv<=3?'var(--primary)':pv<=4?'var(--warn)':'var(--err)';let btns='';
+    if(t.task_status===0||t.task_status===1||t.task_status===5)btns='<button class="btn bs sm" onclick="startT('+t.id+')">执行</button>';
+    else if(t.task_status===2)btns='<button class="btn bd sm" onclick="cancelT('+t.id+')">终止</button>';
+    else if(t.task_status===4)btns='<button class="btn bs sm" onclick="startT('+t.id+')">重试</button>';
+    else btns='<span style="color:var(--muted)">-</span>';
+    let rmd=t.recognition_model||'';
+    let rmdBadge=rmd?'<span class="model-badge">'+rmd+'</span>':'<span style="color:var(--muted)">-</span>';
+    return '<tr><td><input type="checkbox" class="tcb" data-id="'+t.id+'" onchange="updTskSel()"></td><td>'+t.id+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(t.article_url||t.url||'')+'">'+u+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(t.title||'<span style="color:var(--muted)">-</span>')+'</td><td style="text-align:center"><span style="font-weight:700;color:'+pc+'">P'+pv+'</span></td><td><span class="b '+sc[t.task_status]+'"><span class="b-dot"></span>'+statusLabel+'</span>'+retryInfo+errMsg+'</td><td>'+(t.extracted_count||t.records_count||0)+'</td><td>'+rmdBadge+'</td><td>'+(t.created_at?t.created_at.substring(0,16):'-')+'</td><td>'+btns+'</td></tr>'}).join('');
+  renderTskP();
+  }catch(e){document.getElementById('tT').innerHTML='<tr><td colspan="10"><div class="em"><div class="em-t">加载失败</div></div></td></tr>'}
+}
+function renderTskP(){let tp=Math.ceil(tTot/tps)||1;document.getElementById('tPagI').textContent='第 '+tpg+'/'+tp+' 页，共 '+tTot+' 条';document.getElementById('tPagP').disabled=tpg<=1;document.getElementById('tPagN').disabled=tpg>=tp}
+function chgTskP(d){tpg+=d;loadTsk()}
+async function startT(id){try{let r=await fetch(A+'/collection-tasks/'+id+'/start',{method:'POST'});if(r.ok){toast('任务已启动');loadTsk();updBadge();startPolling(id)}else toast('启动失败',false)}catch(e){toast('失败',false)}}
+let _pollTimer=null;function startPolling(id){if(_pollTimer)clearInterval(_pollTimer);_pollTimer=setInterval(async()=>{try{let r=await fetch(A+'/collection-tasks?page_size=500'),d=await r.json(),tasks=d.tasks||d.records||[];let t=tasks.find(x=>x.id===id);if(!t||t.task_status===3||t.task_status===4||t.task_status===5){clearInterval(_pollTimer);_pollTimer=null;loadTsk();loadRev();return}loadTsk()}catch(e){clearInterval(_pollTimer);_pollTimer=null}},2000)}
+async function execAll(){if(!confirm('执行所有待处理任务？'))return;
+  try{let r=await fetch(A+'/collection-tasks/batch-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+  if(r.ok){let d=await r.json();
+   toast('已开始执行 '+d.started+' 个任务');
+   loadTsk();setTimeout(updBadge,3000);
+  }else toast('执行失败',false)}catch(e){toast('执行失败',false)}}
+function togTAll(){let cbs=document.querySelectorAll('.tcb');let checked=document.getElementById('tAll').checked;cbs.forEach(c=>c.checked=checked);updTskSel()}
+function updTskSel(){let cbs=document.querySelectorAll('.tcb');let checked=document.querySelectorAll('.tcb:checked');let cnt=checked.length;document.getElementById('bExecSel').style.display=cnt>0?'':'none';document.getElementById('bDelTsk').style.display=cnt>0?'':'none'}
+function getSelTaskIds(){return Array.from(document.querySelectorAll('.tcb:checked')).map(c=>parseInt(c.dataset.id))}
+async function execSel(){let ids=getSelTaskIds();if(!ids.length){toast('请选择任务',false);return}
+  if(!confirm('执行选中的 '+ids.length+' 个任务？'))return;
+  try{let r=await fetch(A+'/collection-tasks/batch-start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_ids:ids})});
+  if(r.ok){let d=await r.json();toast('已启动 '+d.started+' 个任务');loadTsk();setTimeout(updBadge,3000)}else toast('执行失败',false)}catch(e){toast('执行失败',false)}}
+async function batchDelTsk(){let ids=getSelTaskIds();if(!ids.length){toast('请选择任务',false);return}
+  if(!confirm('删除选中的 '+ids.length+' 个任务？此操作不可撤销！'))return;
+  try{let r=await fetch(A+'/collection-tasks/batch-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_ids:ids})});
+  if(r.ok){let d=await r.json();toast('已删除 '+d.deleted+' 个任务');loadTsk()}else toast('删除失败',false)}catch(e){toast('删除失败',false)}}
+
+async function prevTsk(){
+  let u=document.getElementById('tU').value.trim().split('\\n')[0].trim();if(!u){toast('请输入URL',false);return}
+  let b=document.getElementById('pBtn');b.disabled=true;b.textContent='预览中...';
+  try{let r=await fetch(A+'/collection/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:u})}),d=await r.json();
+  if(d.success){
+    let img=d.cover_image?'<img src="'+d.cover_image+'" style="width:100%;border-radius:8px;margin-bottom:12px" onerror="this.style.display=&quot;none&quot;">':'';
+    let desc=d.description?'<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px">'+d.description.substring(0,150)+'</div>':'';
+    document.getElementById('pBox').style.display='block';
+    document.getElementById('pCon').innerHTML=img+'<div style="font-size:13px"><div style="font-weight:600;font-size:14px;margin-bottom:6px">'+(d.title||'-')+'</div><div style="display:flex;gap:12px;flex-wrap:wrap"><span style="color:var(--pr);font-size:12px">📍 '+(d.school||'-')+'</span><span style="color:var(--su);font-size:12px">📄 约'+(d.estimated_records||0)+' 条录取记录</span></div></div>'+desc;
+    if(!d.title&&!d.school)document.getElementById('pCon').innerHTML='<div style="font-size:13px;color:var(--muted)">文章信息不完整，但仍可创建任务采集</div>';
+  }
+  else toast(d.message||'预览失败',false)}catch(e){toast('网络异常，请检查URL',false)}finally{b.disabled=false;b.textContent='采集预览'}
+}
+async function openTskMod(){
+  if(!recogModels.length)await loadRecogModels();
+  let sel=document.getElementById('tM');
+  sel.innerHTML='<option value="">不使用（仅文本）</option>'+recogModels.map(m=>'<option value="'+m.id+'">'+m.name+'</option>').join('');
+  sel.value=recogSelected;
+  openMod('tskMod');
+}
+async function mkTsk(){
+  let us=document.getElementById('tU').value.trim().split('\\n').map(u=>u.trim()).filter(u=>u.length>0);if(!us.length){toast('请输入URL',false);return}
+  let p=parseInt(document.getElementById('tP').value)||3;
+  let m=document.getElementById('tM').value;
+  closeMod('tskMod');
+  document.getElementById('tU').value='';document.getElementById('tP').value='3';document.getElementById('tM').value='';
+  let tid=toast(`批量导入中，共 ${us.length} 条...`,true);
+  try{
+    let r=await fetch(A+'/collection-tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({urls:us,priority:p,recognition_model:m})});
+    if(r.ok){let d=await r.json();let msg=d.message||(`创建 ${d.created} 个，跳过 ${d.duplicates} 个`);if(tid)removeToast(tid);toast(msg);loadTsk()}else{if(tid)removeToast(tid);toast('创建失败',false)}
+  }catch(e){if(tid)removeToast(tid);toast('创建失败',false)}
+}
+
+/* ===== CONCURRENCY ===== */
+async function openConcMod(){
+  try{let r=await fetch(A+'/settings/concurrency'),d=await r.json();
+  if(d.success){
+    document.getElementById('concRange').value=d.max_concurrent||1;
+    document.getElementById('concVal').textContent=d.max_concurrent||1;
+    document.getElementById('concEnable').checked=d.enabled||false;
+  }
+  }catch(e){document.getElementById('concRange').value=1;document.getElementById('concVal').textContent='1';document.getElementById('concEnable').checked=false}
+  openMod('concMod');
+}
+async function saveConc(){
+  let mc=parseInt(document.getElementById('concRange').value)||1;
+  let en=document.getElementById('concEnable').checked;
+  try{let r=await fetch(A+'/settings/concurrency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_concurrent:mc,enabled:en})});
+  if(r.ok){toast('并发设置已保存');closeMod('concMod');if(en)toast('并发执行已开启，最大'+mc+'个任务');else toast('已关闭并发执行')}
+  else toast('保存失败',false)}catch(e){toast('保存失败',false)}
+}
+/* ===== SCHEDULER ===== */
+async function openSchedMod(){try{let r=await fetch(A+'/settings/scheduler'),d=await r.json();if(d.success){document.getElementById('schedEnable').checked=d.enabled||false;document.getElementById('schedStart').value=d.start_hour||1;document.getElementById('schedEnd').value=d.end_hour||5;if(d.last_run_at){document.getElementById('schedLastRun').style.display='block';document.getElementById('schedLastRunTime').textContent=d.last_run_at.substring(0,16)}else{document.getElementById('schedLastRun').style.display='none'}}}catch(e){}openMod('schedMod')}
+async function saveSched(){let en=document.getElementById('schedEnable').checked;let sh=parseInt(document.getElementById('schedStart').value);let eh=parseInt(document.getElementById('schedEnd').value);if(eh<=sh){toast('结束时间必须大于开始时间',false);return}try{let r=await fetch(A+'/settings/scheduler',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:en,start_hour:sh,end_hour:eh})});if(r.ok){let d=await r.json();toast(en?'定时采集已启用（'+sh+':00-'+eh+':00）':'定时采集已关闭');closeMod('schedMod');updSchedBtn()}else toast('保存失败',false)}catch(e){toast('保存失败',false)}}
+async function updSchedBtn(){try{let r=await fetch(A+'/settings/scheduler'),d=await r.json();let btn=document.getElementById('schedBtn');if(btn&&d.enabled){btn.style.background='var(--ok)';btn.style.color='#fff'}else if(btn){btn.style.background='';btn.style.color=''}}catch(e){}}
+async function cancelT(id){try{let r=await fetch(A+'/collection-tasks/'+id+'/cancel',{method:'POST'});if(r.ok){let d=await r.json();toast(d.message);loadTsk()}else toast('终止失败',false)}catch(e){toast('终止失败',false)}}
+async function resumeT(id){try{let r=await fetch(A+'/collection-tasks/'+id+'/resume',{method:'POST'});if(r.ok){let d=await r.json();toast(d.message);loadTsk()}else toast('恢复失败',false)}catch(e){toast('恢复失败',false)}}
+async function viewDetail(id){openMod('detailMod');document.getElementById('detailContent').innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">加载中...</div>';try{let r=await fetch(A+'/admission-records/detail/'+id),d=await r.json();if(d.success){let rec=d.record;let fields=[['ID',rec.id],['学生姓名(中)',rec.student_name_cn||'-'],['学生姓名(英)',rec.student_name_en||'-'],['大学名称(中)',rec.university_cn||'-'],['大学名称(英)',rec.university_en||'-'],['学院名称',rec.college_name||'-'],['专业名称(中)',rec.major_cn||'-'],['专业名称(英)',rec.major_en||'-'],['国家',rec.country||'-'],['录取类型',rec.admission_type||'-'],['数据来源',rec.data_source||'-'],['录取年份',rec.admission_year||'-'],['文章标题',rec.article_title||'-'],['文章链接',rec.article_url||'-'],['审核状态',rec.review_status||'-'],['审核备注',rec.review_note||'-'],['创建时间',rec.created_at||'-']];let html='<table style="width:100%;border-collapse:collapse">'+fields.map(([k,v])=>{let s=String(v||'');let isUrl=s.startsWith('http');let val=isUrl?'<a href="'+s+'" target="_blank" style="color:var(--primary);word-break:break-all">'+s+'</a>':s;return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 16px;font-size:13px;color:var(--muted);width:110px;white-space:nowrap">'+k+'</td><td style="padding:10px 16px;font-size:13px;color:var(--text);word-break:break-word">'+val+'</td></tr>'}).join('')+'</table>';document.getElementById('detailContent').innerHTML=html}else{document.getElementById('detailContent').innerHTML='<div style="padding:24px;text-align:center;color:var(--err)">加载失败</div>'}}catch(e){document.getElementById('detailContent').innerHTML='<div style="padding:24px;text-align:center;color:var(--err)">加载失败: '+e.message+'</div>'}}
+/* ===== REVIEW ===== */
+async function loadRev(){
+  try{renderRevHeader();let p=new URLSearchParams({page:rpg,page_size:rps});if(rf&&rf!=='all')p.append('status',rf);
+  let r=await fetch(A+'/review/pending?'+p),d=await r.json();renderRev(d.records||[]);renderRPag(d);updBadge();
+  }catch(e){console.error('审核加载错误:',e);let ec=2+Object.keys(rfc).filter(k=>rfc[k]).length+2;document.getElementById('rT').innerHTML='<tr><td colspan="'+ec+'"><div class="em"><div class="em-i">⚠️</div><div class="em-t">加载异常</div><div class="em-d">请刷新页面重试</div></div></td></tr>'}
+}
+
+function renderRPag(d){
+  let pg=document.getElementById('rPag'),info=document.getElementById('rPagInfo'),num=document.getElementById('rPgNum'),prev=document.getElementById('rPrev'),next=document.getElementById('rNext');
+  if(!d.total||d.total===0){pg.style.display='none';return;}
+  pg.style.display='flex';
+  let tp=Math.ceil(d.total/d.page_size)||1;
+  info.textContent='共 '+d.total+' 条记录，第 '+d.page+'/'+tp+' 页';
+  num.textContent=d.page+'/'+tp;
+  prev.disabled=d.page<=1;next.disabled=d.page>=tp;
+}
+
+function rPg(d){rpg=Math.max(1,rpg+d);loadRev();document.querySelector('.tw').scrollTop=0;}
+function renderRevHeader(){
+  let fieldKeys=Object.keys(rfc);
+  let th='<tr><th style="width:36px"><input type="checkbox" id="rAllR" onchange="togAll()"></th><th>ID</th>';
+  fieldKeys.forEach(k=>{
+    if(rfc[k])th+='<th>'+rfN[k]+'</th>';
+  });
+  th+='<th>审核状态</th><th>操作</th></tr>';
+  document.getElementById('rTH').innerHTML=th;
+}
+function renderRev(recs){
+  let b=document.getElementById('rT');
+  let fieldKeys=Object.keys(rfc);
+  let activeFields=fieldKeys.filter(k=>rfc[k]);
+  let totalCols=2+activeFields.length+2;
+  if(!recs.length){
+    let icon='',title='暂无记录',desc='';
+    if(rf==='pending'){icon='🎉';title='全部审核完成';desc='所有待审核数据已处理完毕';}
+    else if(rf==='approved'){icon='✅';title='暂无已通过记录';desc='通过审核的数据将显示在这里';}
+    else if(rf==='rejected'){icon='';title='暂无已拒绝记录';desc='被拒绝的数据将显示在这里';}
+    else{icon='📊';title='暂无数据';desc='当前筛选条件下没有记录';}
+    b.innerHTML='<tr><td colspan="'+totalCols+'"><div class="em"><div class="em-i">'+icon+'</div><div class="em-t">'+title+'</div><div class="em-d">'+desc+'</div></div></td></tr>';return;
+}
+  b.innerHTML=recs.map(r=>{
+  let sc=r.review_status==='approved'?'b-ok':r.review_status==='rejected'?'b-err':'b-w';
+  let st=r.review_status==='approved'?'已通过':r.review_status==='rejected'?'已拒绝':'待审核';
+  let ip=r.review_status==='pending',ck=rS.includes(r.id)?' checked':'',di=ip?'':' disabled';
+  let cols='';
+  fieldKeys.forEach(k=>{
+    if(rfc[k]){
+      let v=r[k];
+      if(v===null||v===undefined)v='-';
+      else if(k==='created_at'||k==='updated_at'||k==='reviewed_at')v=String(v).substring(0,16);
+      else if(k==='scholarship_amount')v=r.scholarship_currency?(r.scholarship_currency+' '+(v||'-')):('¥'+(v||'-'));
+      cols+='<td>'+v+'</td>';
+    }
+  });
+  return '<tr><td><input type="checkbox" class="rcb" onchange="togR('+r.id+',this)"'+ck+di+'></td><td>'+r.id+'</td>'+cols+'<td><span class="b '+sc+'"><span class="b-dot"></span>'+st+'</span></td><td>'+(ip?'<button class="btn bs sm" onclick="appr('+r.id+')">通过</button> <button class="btn bd sm" onclick="rej('+r.id+')">拒绝</button>':'')+'</td></tr>'}).join('');
+  document.getElementById('bApp').style.display=rS.length?'inline-flex':'none';document.getElementById('bRej').style.display=rS.length?'inline-flex':'none';
+}
+function togR(id,cb){if(cb.checked){if(!rS.includes(id))rS.push(id)}else{rS=rS.filter(i=>i!==id)};document.getElementById('bApp').style.display=rS.length?'inline-flex':'none';document.getElementById('bRej').style.display=rS.length?'inline-flex':'none'}
+function togAll(){let ck=document.getElementById('rAllR').checked;document.querySelectorAll('#rT .rcb:not(:disabled)').forEach(cb=>{cb.checked=ck;let row=cb.closest('tr'),id=parseInt(row.cells[1].textContent);if(ck){if(!rS.includes(id))rS.push(id)}else{rS=rS.filter(i=>i!==id)}});document.getElementById('bApp').style.display=rS.length?'inline-flex':'none';document.getElementById('bRej').style.display=rS.length?'inline-flex':'none'}
+async function appr(id){try{let r=await fetch(A+'/review/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'approved',comment:'',reviewer:'管理员'})}),d=await r.json();if(r.ok){toast(d.message||'已通过');rS=rS.filter(i=>i!==id);loadRev()}else toast('失败',false)}catch(e){toast('失败',false)}}
+async function rej(id){let c=prompt('拒绝原因（可选）：');if(c===null)return;try{let r=await fetch(A+'/review/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'rejected',comment:c||'',reviewer:'管理员'})}),d=await r.json();if(r.ok){toast(d.message||'已拒绝');rS=rS.filter(i=>i!==id);loadRev()}else toast('失败',false)}catch(e){toast('失败',false)}}
+async function batchR(act){if(!rS.length){toast('请先选择',false);return}let c='';if(act==='reject')c=prompt('拒绝原因（可选）：')||'';if(!confirm('批量'+(act==='approve'?'通过':'拒绝')+' '+rS.length+' 条？'))return;try{let r=await fetch(A+'/review/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_ids:rS,action:act==='approve'?'approved':'rejected',comment:c,reviewer:'管理员'})}),d=await r.json();if(r.ok){toast(d.message||'成功');rS=[];loadRev()}else toast('失败',false)}catch(e){toast('失败',false)}}
+function setRF(f,btn){rf=f;rpg=1;rS=[];document.querySelectorAll('.fb-b').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadRev()}
+async function updBadge(){try{let r=await fetch(A+'/review/stats'),s=await r.json(),b=document.getElementById('rBadge');if(b)b.textContent=s.pending||0}catch(e){}}
+
+/* ===== STATS ===== */
+async function loadSt(){
+  // 加载统计卡片
+  try{let ov=await fetch(A+'/stats/overview').then(r=>r.json());
+    document.getElementById('sT').textContent=ov.total_records||0;
+    document.getElementById('sC').textContent=ov.total_countries||0;
+    document.getElementById('sU').textContent=ov.total_universities||0;
+    let sc=ov.total_scholarship||0;
+    document.getElementById('sK').textContent='¥'+(sc>=10000?(sc/10000).toFixed(1)+'万':sc.toLocaleString());
+    document.getElementById('sTN').textContent='累计发放';
+  }catch(e){}
+  // 更新待审核角标
+  try{let r=await fetch(A+'/review/stats'),s=await r.json(),b=document.getElementById('rBadge');if(b)b.textContent=s.pending||0}catch(e){}
+  
+  // 图表需要 echarts
+  if(typeof echarts==='undefined'){
+    document.getElementById('cC').innerHTML='<div style="text-align:center;color:#999;padding:40px">图表加载失败，请检查网络连接</div>';
+    document.getElementById('cU').innerHTML='<div style="text-align:center;color:#999;padding:40px">图表加载失败，请检查网络连接</div>';
+    document.getElementById('cR').innerHTML='<div style="text-align:center;color:#999;padding:40px">图表加载失败，请检查网络连接</div>';
+    document.getElementById('cM').innerHTML='<div style="text-align:center;color:#999;padding:40px">图表加载失败，请检查网络连接</div>';
+    return;
+  }
+  // 先 dispose 已有实例
+  if(window._scC){window._scC.dispose();window._scC=null}
+  if(window._scU){window._scU.dispose();window._scU=null}
+  if(window._scR){window._scR.dispose();window._scR=null}
+  if(window._scM){window._scM.dispose();window._scM=null}
+  
+  // 国家分布
+  try{
+    let cd=await fetch(A+'/stats/country').then(r=>r.json());
+    let c1=echarts.init(document.getElementById('cC'));window._scC=c1;
+    c1.setOption({animationDuration:800,animationEasing:'cubicOut',tooltip:{trigger:'item'},
+      series:[{type:'pie',radius:['0%','65%'],roseType:'radius',itemStyle:{borderRadius:6,borderColor:'#fff',borderWidth:2},
+        label:{formatter:'{b}\\n{d}%',fontSize:12},
+        data:(cd.data||[]).map(d=>({value:d.count,name:d.country}))}]});
+  }catch(e){document.getElementById('cC').innerHTML='<div style="text-align:center;color:#999;padding:40px">数据加载失败</div>'}
+  
+  // 大学 TOP10
+  try{
+    let ud=await fetch(A+'/stats/university').then(r=>r.json());
+    let top10=(ud.data||[]).slice(0,10);
+    let c2=echarts.init(document.getElementById('cU'));window._scU=c2;
+    c2.setOption({animationDuration:1000,animationEasing:'cubicOut',tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+      grid:{left:'3%',right:'4%',bottom:'3%',containLabel:true},
+      xAxis:{type:'value'},yAxis:{type:'category',data:top10.map(d=>d.university).reverse(),inverse:true},
+      series:[{type:'bar',data:top10.map(d=>d.count).reverse(),itemStyle:{borderRadius:[0,4,4,0],color:'#4f46e5'},animationDelay:(i)=>i*100}]});
+  }catch(e){document.getElementById('cU').innerHTML='<div style="text-align:center;color:#999;padding:40px">数据加载失败</div>'}
+  
+  // 年度趋势
+  try{
+    let td=await fetch(A+'/stats/trend').then(r=>r.json());
+    let tdata=td.data||[];
+    let c3=echarts.init(document.getElementById('cR'));window._scR=c3;
+    c3.setOption({animationDuration:1200,animationEasing:'cubicOut',tooltip:{trigger:'axis'},
+      xAxis:{type:'category',data:tdata.map(d=>d.year)},
+      yAxis:{type:'value'},
+      series:[{type:'line',data:tdata.map(d=>d.count),smooth:true,areaStyle:{opacity:.1},itemStyle:{color:'#4f46e5'},lineStyle:{width:3}}]});
+  }catch(e){document.getElementById('cR').innerHTML='<div style="text-align:center;color:#999;padding:40px">数据加载失败</div>'}
+  
+  // 专业分布
+  try{
+    let md=await fetch(A+'/stats/major').then(r=>r.json());
+    let c4=echarts.init(document.getElementById('cM'));window._scM=c4;
+    c4.setOption({animationDuration:800,animationEasing:'cubicOut',tooltip:{trigger:'item'},
+      series:[{type:'pie',radius:['0%','65%'],roseType:'area',itemStyle:{borderRadius:6,borderColor:'#fff',borderWidth:2},
+        label:{formatter:'{b}\\n{d}%',fontSize:12},
+        data:(md.data||[]).map(d=>({value:d.count,name:d.major}))}]});
+  }catch(e){document.getElementById('cM').innerHTML='<div style="text-align:center;color:#999;padding:40px">数据加载失败</div>'}
+  
+  window.addEventListener('resize',()=>{if(window._scC)window._scC.resize();if(window._scU)window._scU.resize();if(window._scR)window._scR.resize();if(window._scM)window._scM.resize()});
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const sI=document.getElementById('sI');
+  if(sI)sI.value='';
+  loadRec();
+  updBadge();
+  document.querySelectorAll('.mo').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')})});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.mo.open').forEach(m=>m.classList.remove('open'))});
+});
+
+
+// ===== 退出登录 =====
+function doLogout(){
+  if(!confirm('确定要退出登录吗？'))return;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href='/login';
+}
+
+// ===== 切换账号弹窗 =====
+function openSwitchModal(){
+  const m=document.getElementById('switchModal');
+  if(!m)return;
+  try{
+    const u=JSON.parse(localStorage.getItem('user')||'{}');
+    document.getElementById('switchCurName').textContent=u.username||'未知';
+    document.getElementById('switchCurRole').textContent=u.role_name||'未知角色';
+    document.getElementById('switchCurAvatar').textContent=(u.username||'A')[0].toUpperCase();
+  }catch(e){}
+  loadSwitchUsers();
+  m.classList.add('open');
+}
+
+function closeSwitchModal(){
+  const m=document.getElementById('switchModal');
+  if(m)m.classList.remove('open');
+}
+
+async function loadSwitchUsers(){
+  try{
+    const u=JSON.parse(localStorage.getItem('user')||'{}');
+    const r=await fetch(A+'/users',{headers:{'Authorization':'Bearer '+localStorage.getItem('token')}});
+    const d=await r.json();
+    const sel=document.getElementById('switchUserSelect');
+    if(sel){
+      sel.innerHTML='<option value="">-- 选择账号 --</option>';
+      (d.users||[]).forEach(usr=>{
+        if(usr.id!==u.id&&usr.is_active){
+          const opt=document.createElement('option');
+          opt.value=usr.username;
+          opt.textContent=usr.full_name||usr.username+' ('+usr.role_name+')';
+          sel.appendChild(opt);
+        }
+      });
+    }
+  }catch(e){}
+}
+
+async function doSwitchAccount(){
+  const sel=document.getElementById('switchUserSelect');
+  if(!sel)return;
+  const username=sel.value;
+  if(!username){alert('请选择要切换的账号');return;}
+  const pwd=prompt('请输入 '+username+' 的密码：');
+  if(!pwd)return;
+  try{
+    const r=await fetch(A+'/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:username,password:pwd})
+    });
+    const d=await r.json();
+    if(d.success && d.token){
+      localStorage.setItem('token',d.token);
+      localStorage.setItem('user',JSON.stringify(d.user));
+      closeSwitchModal();
+      alert('已切换到 '+d.user.username);
+      location.reload();
+    }else{
+      alert('密码错误，请重试');
+    }
+  }catch(e){
+    alert('切换失败，请重试');
+  }
+}
+
+// 搜索框智能输入（支持中文）
+(function(){
+  const sI=document.getElementById('sI');
+  if(!sI)return;
+  let t=null;
+  sI.addEventListener('input',function(e){
+    if(e.isComposing)return;
+    clearTimeout(t);t=setTimeout(()=>loadRec(),500);
+  });
+  sI.addEventListener('compositionend',function(){
+    clearTimeout(t);t=setTimeout(()=>loadRec(),300);
+  });
+  sI.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.isComposing){e.preventDefault();loadRec();}
+  });
+})();
+
+// ===== Excel 导入功能 =====
+let exlUrls = [];
+
+function openExlImp() {
+  exlUrls = [];
+  document.getElementById('exlPrev').style.display = 'none';
+  document.getElementById('exlOk').disabled = true;
+  document.getElementById('exlOkCnt').textContent = '0';
+  document.getElementById('exlFile').value = '';
+  openMod('exlMod');
+}
+
+function parseExlFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var workbook = XLSX.read(data, { type: 'array' });
+      var sheet = workbook.Sheets[workbook.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      var urls = [];
+      json.forEach(function(row) {
+        if (row[0] && typeof row[0] === 'string') {
+          var url = row[0].trim();
+          if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            urls.push(url);
+          }
+        }
+      });
+      var unique = [];
+      var seen = {};
+      urls.forEach(function(u) {
+        if (!seen[u]) { seen[u] = true; unique.push(u); }
+      });
+      if (unique.length === 0) {
+        toast('未找到有效的 URL，请检查 Excel 格式', false);
+        return;
+      }
+      exlUrls = unique;
+      document.getElementById('exlCnt').textContent = unique.length;
+      document.getElementById('exlOkCnt').textContent = unique.length;
+      document.getElementById('exlOk').disabled = false;
+      var tagsEl = document.getElementById('exlTags');
+      var html = '';
+      for (var i = 0; i < Math.min(unique.length, 8); i++) {
+        var u = unique[i];
+        var label = u.length > 40 ? u.substring(0, 40) + '...' : u;
+        html += '<span class="exl-tag" title="' + u + '">' + label + '</span>';
+      }
+      if (unique.length > 8) {
+        html += '<span class="exl-tag" style="background:var(--info-bg);color:var(--info);border-color:var(--info)">+' + (unique.length - 8) + ' 更多</span>';
+      }
+      tagsEl.innerHTML = html;
+      document.getElementById('exlPrev').style.display = 'block';
+      toast('成功读取 ' + unique.length + ' 条 URL（已自动去重）');
+    } catch (err) {
+      toast('Excel 文件解析失败', false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function confirmExlImp() {
+  if (exlUrls.length === 0) return;
+  var existing = document.getElementById('tU').value
+    ? document.getElementById('tU').value.split('\\n').map(function(u) { return u.trim(); }).filter(function(u) { return u; })
+    : [];
+  var allUrls = [];
+  var seen = {};
+  existing.concat(exlUrls).forEach(function(u) {
+    if (!seen[u]) { seen[u] = true; allUrls.push(u); }
+  });
+  document.getElementById('tU').value = allUrls.join('\\n');
+  toast('已导入 ' + exlUrls.length + ' 条 URL');
+  closeMod('exlMod');
+  exlUrls = [];
+}
+
+// Drag and drop
+(function() {
+  var drop = document.getElementById('exlDrop');
+  if (!drop) return;
+  drop.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    drop.classList.add('drag-over');
+  });
+  drop.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    drop.classList.remove('drag-over');
+  });
+  drop.addEventListener('drop', function(e) {
+    e.preventDefault();
+    drop.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) {
+      parseExlFile(e.dataTransfer.files[0]);
+    }
+  });
+})();
+ async function submitManualEntry(){
+  let name=document.getElementById('me_name').value.trim();
+  let source=document.getElementById('me_source').value.trim();
+  let uni=document.getElementById('me_uni').value.trim();
+  let country=document.getElementById('me_country').value.trim();
+  let errors=[];
+  if(!name){errors.push('学生姓名');document.getElementById('me_name').classList.add('error');}
+  else{document.getElementById('me_name').classList.remove('error');}
+  if(!source){errors.push('数据来源');document.getElementById('me_source').classList.add('error');}
+  else{document.getElementById('me_source').classList.remove('error');}
+  if(!uni){errors.push('录取大学');document.getElementById('me_uni').classList.add('error');}
+  else{document.getElementById('me_uni').classList.remove('error');}
+  if(!country){errors.push('国家');document.getElementById('me_country').classList.add('error');}
+  else{document.getElementById('me_country').classList.remove('error');}
+  if(errors.length>0){toast('请填写必填字段：'+errors.join('、'),false);return;}
+  
+  let data={
+    student_name:name,
+    university:uni,
+    country:country,
+    data_source:source,
+    major_cn:document.getElementById('me_major').value.trim(),
+    admission_type:document.getElementById('me_type').value,
+    admission_status:document.getElementById('me_status').value,
+    admission_year:document.getElementById('me_year').value||null,
+    scholarship_amount:document.getElementById('me_scholarship').value.trim(),
+    scholarship_currency:document.getElementById('me_currency').value.trim(),
+    notes:document.getElementById('me_notes').value.trim(),
+    article_url:document.getElementById('me_url').value.trim(),
+    article_title:document.getElementById('me_title').value.trim()
+  };
+  
+  try{
+    let r=await fetch(A+'/records/manual-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    let d=await r.json();
+    if(d && d.success===true){toast('创建成功！');closeMod('manualMod');loadRec();}
+    else{toast('创建失败：'+(d && d.detail?d.detail:d && d.message?d.message:'未知错误'),false);}
+  }catch(e){toast('网络错误：'+e.message,false);}
+}
+
+function openManualEntry(){
+  // Reset form
+  ['me_name','me_source','me_uni','me_country','me_major','me_year','me_scholarship','me_currency','me_url','me_title','me_notes'].forEach(id=>{
+    let el=document.getElementById(id);
+    if(el){el.value='';el.classList.remove('error');}
+  });
+  document.getElementById('me_type').value='';
+  document.getElementById('me_status').value='已录取';
+  openMod('manualMod');
+}
+
+async function submitManualEntry(){
+  let name=document.getElementById('me_name').value.trim();
+  let source=document.getElementById('me_source').value.trim();
+  let uni=document.getElementById('me_uni').value.trim();
+  let country=document.getElementById('me_country').value.trim();
+  let errors=[];
+  if(!name){errors.push('学生姓名');document.getElementById('me_name').classList.add('error');}
+  else{document.getElementById('me_name').classList.remove('error');}
+  if(!source){errors.push('数据来源');document.getElementById('me_source').classList.add('error');}
+  else{document.getElementById('me_source').classList.remove('error');}
+  if(!uni){errors.push('录取大学');document.getElementById('me_uni').classList.add('error');}
+  else{document.getElementById('me_uni').classList.remove('error');}
+  if(!country){errors.push('国家');document.getElementById('me_country').classList.add('error');}
+  else{document.getElementById('me_country').classList.remove('error');}
+  if(errors.length>0){toast('请填写必填字段：'+errors.join('、'),false);return;}
+  
+  let data={
+    student_name:name,
+    university:uni,
+    country:country,
+    data_source:source,
+    major_cn:document.getElementById('me_major').value.trim(),
+    admission_type:document.getElementById('me_type').value,
+    admission_status:document.getElementById('me_status').value,
+    admission_year:document.getElementById('me_year').value||null,
+    scholarship_amount:document.getElementById('me_scholarship').value.trim(),
+    scholarship_currency:document.getElementById('me_currency').value.trim(),
+    notes:document.getElementById('me_notes').value.trim(),
+    article_url:document.getElementById('me_url').value.trim(),
+    article_title:document.getElementById('me_title').value.trim()
+  };
+  
+  try{
+    let r=await fetch(A+'/records/manual-entry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    let d=await r.json();
+    if(d.success){toast('创建成功！');closeMod('manualMod');loadRec();}
+    else{toast('创建失败：'+(d.detail||d.message||'未知错误'),false);}
+  }catch(e){toast('网络错误',false);}
+}
+
+// ==================== 系统管理 ====================
+function showSysTab(tab){
+  document.getElementById('sysLogsTab').style.display=tab==='logs'?'block':'none';
+  document.getElementById('sysBackupTab').style.display=tab==='backup'?'block':'none';
+  document.getElementById('sysTabLogs').className=tab==='logs'?'btn bp':'btn bg';
+  document.getElementById('sysTabBackup').className=tab==='backup'?'btn bp':'btn bg';
+  if(tab==='logs') loadLogs();
+  if(tab==='backup') loadBackupSettings();
+}
+
+async function loadUsers(){
+  try{
+    let r=await fetch(A+'/system/users');
+    let d=await r.json();
+    let users=d.users||[];
+    let roleNames={1:'系统管理员',2:'数据管理员',3:'普通用户',4:'采集操作员'};
+    document.getElementById('uCnt').textContent=users.length+' 人';
+    let tb=document.getElementById('uTb');
+    if(!users.length){tb.innerHTML='<tr><td colspan="8" class="empty-tip">暂无用户</td></tr>';return}
+    tb.innerHTML=users.map(u=>{
+      let rn=roleNames[u.role_id]||u.role_name||'未知';
+      let statusBadge=u.is_active?'<span class="b b-ok"><span class="b-dot"></span>启用</span>':'<span class="b b-err"><span class="b-dot"></span>停用</span>';
+      return '<tr><td>'+u.id+'</td><td><strong>'+u.username+'</strong></td><td>'+(u.full_name||'-')+'</td><td>'+(u.email||'-')+'</td><td>'+rn+'</td><td>'+statusBadge+'</td><td>'+(u.last_login||'-')+'</td><td>'+(u.is_active?'<button class="btn bp sm" onclick="editUser('+u.id+')" style="margin-right:4px">编辑</button><button class="btn bd sm" onclick="deactUser('+u.id+')">停用</button>':'<button class="btn bs sm" onclick="actUser('+u.id+')">启用</button>')+'</td></tr>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+function openAddUserMod(){
+  openMod('addUserMod');
+  document.getElementById('auName').value='';
+  document.getElementById('auPass').value='';
+  document.getElementById('auFullName').value='';
+  document.getElementById('auEmail').value='';
+  document.getElementById('auRole').value='3';
+}
+
+async function addUser(){
+  let username=document.getElementById('auName').value.trim();
+  let password=document.getElementById('auPass').value.trim();
+  let full_name=document.getElementById('auFullName').value.trim();
+  let email=document.getElementById('auEmail').value.trim();
+  let role_id=parseInt(document.getElementById('auRole').value);
+  if(!username||!password){toast('用户名和密码不能为空',false);return}
+  try{
+    let r=await fetch(A+'/system/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,full_name,email,role_id})});
+    let d=await r.json();
+    if(r.ok){toast('用户创建成功');closeMod('addUserMod');loadUsers();
+      fetch(A+'/system/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation_type:'create_user',operation_desc:'创建用户: '+username})}).catch(()=>{});
+    }else toast(d.detail||'创建失败',false)
+  }catch(e){toast('创建失败: '+e.message,false)}
+}
+
+async function deactUser(id){
+  if(!confirm('确定停用此用户？'))return;
+  try{
+    let r=await fetch(A+'/system/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'deactivate'})});
+    let d=await r.json();
+    if(r.ok){toast('用户已停用');loadUsers()}else toast(d.detail||'操作失败',false)
+  }catch(e){toast('操作失败',false)}
+}
+
+async function actUser(id){
+  try{
+    let r=await fetch(A+'/system/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'activate'})});
+    let d=await r.json();
+    if(r.ok){toast('用户已启用');loadUsers()}else toast(d.detail||'操作失败',false)
+  }catch(e){toast('操作失败',false)}
+}
+
+let logPg=1;
+async function loadLogs(delta){
+  if(delta) logPg+=delta;
+  if(logPg<1) logPg=1;
+  let user=document.getElementById('logSearch').value.trim();
+  let type=document.getElementById('logType').value;
+  try{
+    let url=A+'/system/logs?page='+logPg+'&page_size=20';
+    if(user) url+='&user='+encodeURIComponent(user);
+    if(type) url+='&type='+encodeURIComponent(type);
+    let r=await fetch(url);
+    let d=await r.json();
+    let logs=d.logs||[];
+    let total=d.total||0;
+    document.getElementById('logCnt').textContent=total+' 条';
+    let tb=document.getElementById('logTb');
+    if(!logs.length){tb.innerHTML='<tr><td colspan="7" class="empty-tip">暂无日志</td></tr>';
+    document.getElementById('logPg').textContent='第 0/0 页';return}
+    let typeColors={'create_user':'var(--primary)','delete_record':'var(--err)','update_record':'var(--warn)','batch_delete':'var(--err)','login':'var(--ok)','backup':'var(--bs)'};
+    tb.innerHTML=logs.map(l=>{
+      let tc=typeColors[l.operation_type]||'var(--muted)';
+      return '<tr><td>'+l.id+'</td><td>'+(l.username||'-')+'</td><td><span style="color:'+tc+';font-weight:500">'+l.operation_type+'</span></td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(l.operation_desc||'-')+'</td><td style="font-family:monospace;font-size:12px">'+(l.ip_address||'-')+'</td><td>'+(l.created_at||'-')+'</td><td><button class="btn bd sm" onclick="delLog('+l.id+')">删除</button></td></tr>';
+    }).join('');
+    let tp=Math.ceil(total/20)||1;
+    document.getElementById('logPg').textContent='第 '+logPg+'/'+tp+' 页';
+    document.getElementById('logPrev').disabled=logPg<=1;
+    document.getElementById('logNext').disabled=logPg>=tp;
+  }catch(e){console.error(e)}
+}
+
+async function delLog(id){
+  if(!confirm('确定删除此日志？'))return;
+  try{
+    let r=await fetch(A+'/system/logs/'+id,{method:'DELETE'});
+    if(r.ok){toast('日志已删除');loadLogs(0)}else toast('删除失败',false)
+  }catch(e){toast('删除失败',false)}
+}
+
+async function loadBackupSettings(){
+  try{
+    let r=await fetch(A+'/system/backup-settings');
+    let d=await r.json();
+    document.getElementById('bkInterval').value=d.backup_interval_days||7;
+    document.getElementById('bkSpan').value=d.time_span_days||30;
+    document.getElementById('bkAuto').checked=!!d.auto_backup_enabled;
+    document.getElementById('bkLast').textContent=d.last_backup_at||'未备份';
+    let lr=await fetch(A+'/system/logs?page=1&page_size=1');
+    let ld=await lr.json();
+    document.getElementById('bkLogCnt').textContent=ld.total||0;
+  }catch(e){console.error(e)}
+}
+
+async function saveBackupSettings(){
+  let interval=parseInt(document.getElementById('bkInterval').value)||7;
+  let span=parseInt(document.getElementById('bkSpan').value)||30;
+  let auto=document.getElementById('bkAuto').checked?1:0;
+  try{
+    let r=await fetch(A+'/system/backup-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({backup_interval_days:interval,time_span_days:span,auto_backup_enabled:auto})});
+    let d=await r.json();
+    if(r.ok){toast('设置已保存');loadBackupSettings();
+      fetch(A+'/system/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation_type:'backup',operation_desc:'更新备份设置'})}).catch(()=>{});
+    }else toast(d.detail||'保存失败',false)
+  }catch(e){toast('保存失败',false)}
+}
+
+async function manualBackup(){
+  let span=parseInt(document.getElementById('bkSpan').value)||30;
+  if(!confirm('确定备份并删除 '+span+' 天内的日志？'))return;
+  try{
+    let r=await fetch(A+'/system/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({time_span_days:span})});
+    let d=await r.json();
+    if(r.ok){toast('备份成功：'+d.backed_up_count+' 条已备份并删除');loadBackupSettings();loadLogs(0);
+      fetch(A+'/system/logs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation_type:'backup',operation_desc:'手动备份日志，备份 '+d.backed_up_count+' 条'})}).catch(()=>{});
+    }else toast(d.message||'备份失败',false)
+  }catch(e){toast('备份失败',false)}
+}
+
+let recogModels=[],recogSelected='qwen3.5-plus';
+
+async function loadRecogModels(){
+  try{
+    let r=await fetch(A+'/recognition-models'),d=await r.json();
+    recogModels=d.models||[];
+  }catch(e){console.error(e)}
+}
+
+
+</script>
+<!-- 切换账号弹窗 -->
+<div class="mo" id="switchModal">
+  <div class="md" style="max-width:380px">
+    <div class="md-h"><h3>切换账号</h3><button class="md-x" onclick="closeSwitchModal()">&times;</button></div>
+    <div class="md-b">
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">当前账号</label>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:#f8fafc;border-radius:8px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--pr);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px" id="switchCurAvatar">A</div>
+          <div>
+            <div style="font-weight:600;font-size:14px" id="switchCurName">admin</div>
+            <div style="font-size:12px;color:var(--muted)" id="switchCurRole">系统管理员</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">切换到</label>
+        <select id="switchUserSelect" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;outline:none">
+          <option value="">-- 选择账号 --</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn-s" onclick="closeSwitchModal()" style="flex:1">取消</button>
+        <button class="btn-p" onclick="doSwitchAccount()" style="flex:1">切换</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 手动录入弹窗 -->
+<div class="mo" id="manualMod">
+  <div class="md" style="max-width:600px">
+    <div class="md-h"><div class="md-t">手动录入录取记录</div><button class="md-x" onclick="closeMod('manualMod')">×</button></div>
+    <div class="md-b">
+      <div class="me-grid">
+        <div class="me-field">
+          <label><span class="me-req-dot"></span>学生姓名</label>
+          <input type="text" id="me_name" placeholder="必填" required>
+        </div>
+        <div class="me-field">
+          <label><span class="me-req-dot"></span>数据来源</label>
+          <input type="text" id="me_source" placeholder="必填" required>
+        </div>
+        <div class="me-field">
+          <label><span class="me-req-dot"></span>录取大学</label>
+          <input type="text" id="me_uni" placeholder="必填" required>
+        </div>
+        <div class="me-field">
+          <label><span class="me-req-dot"></span>国家</label>
+          <input type="text" id="me_country" placeholder="必填" required>
+        </div>
+        <div class="me-field">
+          <label>专业</label>
+          <input type="text" id="me_major" placeholder="例如：计算机科学">
+        </div>
+        <div class="me-field">
+          <label>录取类型</label>
+          <select id="me_type">
+            <option value="">请选择</option>
+            <option value="本科">本科</option>
+            <option value="硕士">硕士</option>
+            <option value="博士">博士</option>
+            <option value="语言班">语言班</option>
+          </select>
+        </div>
+        <div class="me-field">
+          <label>录取状态</label>
+          <select id="me_status">
+            <option value="已录取">已录取</option>
+            <option value="待确认">待确认</option>
+            <option value="已拒绝">已拒绝</option>
+          </select>
+        </div>
+        <div class="me-field">
+          <label>年份</label>
+          <input type="number" id="me_year" placeholder="例如：2025">
+        </div>
+        <div class="me-field">
+          <label>奖学金金额</label>
+          <input type="text" id="me_scholarship" placeholder="例如：5000">
+        </div>
+        <div class="me-field">
+          <label>奖学金货币</label>
+          <input type="text" id="me_currency" placeholder="例如：USD、GBP">
+        </div>
+        <div class="me-field" style="grid-column:1/-1">
+          <label>文章链接</label>
+          <input type="url" id="me_url" placeholder="https://...">
+        </div>
+        <div class="me-field" style="grid-column:1/-1">
+          <label>文章标题</label>
+          <input type="text" id="me_title" placeholder="录取喜报标题">
+        </div>
+        <div class="me-field" style="grid-column:1/-1">
+          <label>备注</label>
+          <textarea id="me_notes" rows="2" placeholder="其他备注信息"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="md-f">
+      <button class="btn bo" onclick="closeMod('manualMod')">取消</button>
+      <button class="btn bp" onclick="submitManualEntry()">创建记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加账号弹窗 -->
+<div class="mo" id="addUserMod"><div class="md" style="max-width:480px"><div class="md-h"><div class="md-t">👤 添加账号</div><button class="md-x" onclick="closeMod('addUserMod')">&times;</button></div>
+<div class="md-b">
+<div style="display:grid;gap:12px">
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">用户名 <span style="color:var(--err)">*</span></label><input type="text" id="auName" placeholder="请输入用户名" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"></div>
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">密码 <span style="color:var(--err)">*</span></label><input type="password" id="auPass" placeholder="请输入密码" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"></div>
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">姓名</label><input type="text" id="auFullName" placeholder="请输入姓名" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"></div>
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">邮箱</label><input type="email" id="auEmail" placeholder="请输入邮箱" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"></div>
+<div><label style="font-size:13px;color:var(--text2);display:block;margin-bottom:4px">角色</label><select id="auRole" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg);color:var(--text)"><option value="1">系统管理员</option><option value="2">数据管理员</option><option value="4">采集操作员</option><option value="3" selected>普通用户</option></select></div>
+</div>
+</div>
+<div class="md-f"><button class="btn bg" onclick="closeMod('addUserMod')">取消</button><button class="btn bp" onclick="addUser()">创建账号</button></div>
+</div></div>
+
+<!-- 弹窗定义 -->
+<div class="mo" id="concMod"><div class="md" style="max-width:400px"><div class="md-h"><div class="md-t">⚡ 并发设置</div><button class="md-x" onclick="closeMod('concMod')">&times;</button></div>
+<div class="md-b">
+<div class="f"><label class="f-l">最大并发任务数</label>
+<div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+  <input type="range" id="concRange" min="1" max="15" value="1" oninput="document.getElementById('concVal').textContent=this.value" style="flex:1;accent-color:var(--primary)">
+  <span id="concVal" style="font-size:24px;font-weight:700;color:var(--primary);min-width:30px;text-align:center">1</span>
+</div>
+<div style="font-size:12px;color:var(--muted);margin-top:8px">同时执行的任务数量，默认不开启并发（一次执行一个任务），最大15</div>
+</div>
+<div class="ck" style="margin-top:16px"><input type="checkbox" id="concEnable"><label for="concEnable">启用并发执行</label></div>
+</div>
+<div class="md-f"><button class="btn bg" onclick="closeMod('concMod')">取消</button><button class="btn bp" onclick="saveConc()">保存设置</button></div></div></div>
+
+<div class="mo" id="schedMod"><div class="md" style="max-width:440px"><div class="md-h"><div class="md-t">⏰ 定时采集设置</div><button class="md-x" onclick="closeMod('schedMod')">&times;</button></div>
+<div class="md-b">
+<div class="ck" style="margin-bottom:20px"><input type="checkbox" id="schedEnable"><label for="schedEnable"><b>启用定时采集</b></label></div>
+<div class="f"><label class="f-l">采集时间段</label>
+<div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+  <div style="flex:1;text-align:center;padding:12px;background:var(--bg);border-radius:var(--r-sm)">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">开始时间</div>
+    <select id="schedStart" style="font-size:18px;font-weight:700;color:var(--ok);text-align:center;border:none;background:transparent;width:100%;cursor:pointer">
+      <option value="0">00:00</option><option value="1" selected>01:00</option><option value="2">02:00</option><option value="3">03:00</option>
+      <option value="4">04:00</option><option value="5">05:00</option><option value="6">06:00</option><option value="7">07:00</option>
+      <option value="8">08:00</option><option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option>
+      <option value="12">12:00</option><option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option>
+      <option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option>
+      <option value="20">20:00</option><option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option>
+    </select>
+  </div>
+  <div style="font-size:20px;color:var(--muted);font-weight:300">→</div>
+  <div style="flex:1;text-align:center;padding:12px;background:var(--bg);border-radius:var(--r-sm)">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">结束时间</div>
+    <select id="schedEnd" style="font-size:18px;font-weight:700;color:var(--primary);text-align:center;border:none;background:transparent;width:100%;cursor:pointer">
+      <option value="1">01:00</option><option value="2">02:00</option><option value="3">03:00</option><option value="4">04:00</option>
+      <option value="5" selected>05:00</option><option value="6">06:00</option><option value="7">07:00</option><option value="8">08:00</option>
+      <option value="9">09:00</option><option value="10">10:00</option><option value="11">11:00</option><option value="12">12:00</option>
+      <option value="13">13:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option>
+      <option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="20">20:00</option>
+      <option value="21">21:00</option><option value="22">22:00</option><option value="23">23:00</option><option value="24">24:00</option>
+    </select>
+  </div>
+</div>
+<div style="font-size:12px;color:var(--muted);margin-top:8px">每天在设定时间段内自动执行待处理任务，按优先级排序，支持并发执行</div>
+</div>
+<div id="schedLastRun" style="display:none;font-size:12px;color:var(--muted);margin-top:12px;padding:8px 12px;background:var(--bg);border-radius:var(--r-sm)">上次执行：<span id="schedLastRunTime">-</span></div>
+</div>
+<div class="md-f"><button class="btn bg" onclick="closeMod('schedMod')">取消</button><button class="btn bp" onclick="saveSched()">保存设置</button></div></div></div>
+
+<div class="mo" id="detailMod"><div class="md" style="max-width:520px"><div class="md-h"><div class="md-t">📋 录取记录详情</div><button class="md-x" onclick="closeMod('detailMod')">&times;</button></div>
+<div class="md-b" id="detailContent" style="padding:0"><div style="padding:24px;text-align:center;color:var(--muted)">加载中...</div></div>
+<div class="md-f"><button class="btn bg" onclick="closeMod('detailMod')">关闭</button></div></div></div>
+
+<div class="mo" id="reviewFldMod"><div class="md"><div class="md-h"><div class="md-t">审核显示字段设置</div><button class="md-x" onclick="closeMod('reviewFldMod')">&times;</button></div><div class="md-b"><div class="cks" id="rfC"></div></div><div class="md-f"><button class="btn bg" onclick="closeMod('reviewFldMod')">取消</button><button class="btn bp" onclick="saveReviewFld()">保存</button></div></div></div>
+
+<div class="mo" id="fldMod"><div class="md"><div class="md-h"><div class="md-t">显示字段设置</div><button class="md-x" onclick="closeMod('fldMod')">&times;</button></div><div class="md-b"><div class="cks" id="fC"></div></div><div class="md-f"><button class="btn bg" onclick="closeMod('fldMod')">取消</button><button class="btn bp" onclick="saveFld()">保存</button></div></div></div>
+
+<div class="mo" id="expMod"><div class="md" style="max-width:380px"><div class="md-h"><div class="md-t">导出数据</div><button class="md-x" onclick="closeMod('expMod')">&times;</button></div><div class="md-b"><p style="color:var(--text2);margin-bottom:14px;font-size:13px">选择导出格式：</p><div style="display:flex;flex-direction:column;gap:8px">
+<button class="btn bp" onclick="exportD('pdf')">导出 PDF</button><button class="btn bs" onclick="exportD('excel')">导出 Excel</button><button class="btn bo" onclick="exportD('csv')">导出 CSV</button>
+</div></div></div></div>
+
+<div class="mo" id="tskMod"><div class="md" style="max-width:520px"><div class="md-h"><div class="md-t">新建采集任务</div><button class="md-x" onclick="closeMod('tskMod')">&times;</button></div>
+<div class="md-b">
+<div class="f"><label class="f-l">文章 URL</label><textarea class="ta" id="tU" rows="6" placeholder="https://mp.weixin.qq.com/s/xxxxx&#10;每行一个 URL"></textarea></div>
+<div id="pBox" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border-radius:var(--r-sm)"><div style="font-size:12px;font-weight:600;margin-bottom:6px">采集预览</div><div id="pCon"></div></div>
+</div>
+<div class="md-f" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+  <div style="display:flex;gap:8px">
+    <button class="btn bo" id="pBtn" onclick="prevTsk()">采集预览</button>
+    <button class="btn exl-btn" id="exlBtn" onclick="openExlImp()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Excel 导入
+    </button>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:13px;color:var(--text2);font-weight:500">优先级</label>
+      <select id="tP" class="sel" style="min-width:70px;padding:7px 10px">
+        <option value="1">1级（最高）</option>
+        <option value="2">2级</option>
+        <option value="3" selected>3级（默认）</option>
+        <option value="4">4级</option>
+        <option value="5">5级（最低）</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:13px;color:var(--text2);font-weight:500">识别模型</label>
+      <select id="tM" class="sel" style="min-width:140px;padding:7px 10px">
+        <option value="">不使用（仅文本）</option>
+      </select>
+    </div>
+    <button class="btn bp" onclick="mkTsk()">创建任务</button>
+  </div>
+</div></div></div>
+
+<div class="mo" id="editMod"><div class="md" style="max-width:600px;max-height:90vh;overflow-y:auto"><div class="md-h"><div class="md-t">✏️ 编辑录取记录</div><button class="md-x" onclick="closeMod('editMod')">&times;</button></div>
+<div class="md-b" id="editContent"><div style="padding:24px;text-align:center;color:var(--muted)">加载中...</div></div>
+<div class="md-f"><button class="btn bg" onclick="closeMod('editMod')">取消</button><button class="btn bp" onclick="saveEdit()">保存修改</button></div></div></div>
+
+<div class="mo" id="exlMod"><div class="md exl-modal"><div class="md-h"><div class="md-t">📊 Excel 导入</div><button class="md-x" onclick="closeMod('exlMod')">&times;</button></div>
+<div class="md-b">
+<div class="exl-rules"><strong>填写说明</strong>
+<div class="exl-rules-item">1. 第一列填写 <b>URL</b>，每行一个微信公众号文章链接</div>
+<div class="exl-rules-item">2. 支持 <b>.xlsx</b>、<b>.xls</b>、<b>.csv</b> 格式</div>
+<div class="exl-rules-item">3. 自动去重，跳过已存在的 URL</div>
+</div>
+<div class="exl-drop-zone" id="exlDrop" onclick="document.getElementById('exlFile').click()">
+  <div class="exl-drop-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;color:var(--primary)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+  </div>
+  <div class="exl-drop-text">拖拽文件到此处，或 <span class="exl-drop-link">点击选择文件</span></div>
+  <div class="exl-drop-hint">支持 .xlsx / .xls / .csv 格式</div>
+  <input type="file" id="exlFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="parseExlFile(this.files[0])">
+</div>
+<div id="exlPrev" style="display:none">
+  <div class="exl-prev-header">已识别 <b id="exlCnt">0</b> 条 URL（已自动去重）</div>
+  <div id="exlTags" class="exl-tags"></div>
+</div>
+</div>
+<div class="md-f exl-footer">
+  <button class="btn bo" onclick="closeMod('exlMod');exlUrls=[]">取消</button>
+  <button class="btn bp" id="exlOk" disabled onclick="confirmExlImp()">
+    确认导入 <span id="exlOkCnt" class="exl-badge">0</span> 条
+  </button>
+</div>
+</div></div>
+
+</body></html>
+
+
+'''

@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>贝优 - 登录</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
+    <style>
+        /* ===== Design Tokens ===== */
+        :root {
+            --color-primary: #4f46e5;
+            --color-primary-light: #818cf8;
+            --color-primary-dark: #3730a3;
+            --color-primary-bg: #eef2ff;
+            --color-surface: #ffffff;
+            --color-bg: #f8fafc;
+            --color-text: #0f172a;
+            --color-text-secondary: #64748b;
+            --color-text-muted: #94a3b8;
+            --color-border: #e2e8f0;
+            --color-error: #ef4444;
+            --color-success: #22c55e;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* ===== Reset & Base ===== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ===== Split Layout ===== */
+        .login-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* ===== Left Panel - Brand ===== */
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(5deg); }
+            66% { transform: translate(-20px, 20px) rotate(-3deg); }
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: white;
+            animation: slideUp 0.8s var(--ease-out-expo) both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Instrument Serif', serif;
+            font-size: 36px;
+            font-weight: 700;
+            margin: 0 auto 32px;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 400;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-subtitle {
+            font-size: 18px;
+            opacity: 0.85;
+            font-weight: 300;
+            margin-bottom: 48px;
+        }
+
+        .brand-features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            text-align: left;
+            max-width: 320px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s var(--ease-out-quart), background 0.3s ease;
+            animation: slideUp 0.8s var(--ease-out-expo) both;
+        }
+
+        .feature-item:nth-child(1) { animation-delay: 0.1s; }
+        .feature-item:nth-child(2) { animation-delay: 0.2s; }
+        .feature-item:nth-child(3) { animation-delay: 0.3s; }
+
+        .feature-item:hover {
+            transform: translateX(8px);
+            background: rgba(255,255,255,0.15);
+        }
+
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+
+        .feature-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .feature-text strong {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .feature-text span {
+            opacity: 0.8;
+            font-size: 13px;
+        }
+
+        /* ===== Right Panel - Form ===== */
+        .form-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            background: var(--color-surface);
+            position: relative;
+        }
+
+        .form-wrapper {
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.8s var(--ease-out-expo) 0.2s both;
+        }
+
+        .form-header {
+            margin-bottom: 40px;
+        }
+
+        .form-header h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 28px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            color: var(--color-text);
+        }
+
+        .form-header p {
+            color: var(--color-text-secondary);
+            font-size: 15px;
+        }
+
+        /* ===== Form Elements ===== */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            border: 1.5px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--color-text);
+            background: var(--color-surface);
+            transition: all 0.2s var(--ease-out-quart);
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: var(--color-text-muted);
+        }
+
+        .form-input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 4px var(--color-primary-bg);
+        }
+
+        .form-input:focus + .input-icon,
+        .form-input:focus ~ .input-icon {
+            color: var(--color-primary);
+        }
+
+        .form-input.error {
+            border-color: var(--color-error);
+            box-shadow: 0 0 0 4px rgba(239,68,68,0.1);
+        }
+
+        .error-message {
+            font-size: 13px;
+            color: var(--color-error);
+            margin-top: 8px;
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Password Toggle ===== */
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+        }
+
+        .password-toggle:hover {
+            color: var(--color-text);
+        }
+
+        /* ===== Remember & Forgot ===== */
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--color-primary);
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper span {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .forgot-link {
+            font-size: 14px;
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .forgot-link:hover {
+            color: var(--color-primary-dark);
+        }
+
+        /* ===== Submit Button ===== */
+        .submit-btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s var(--ease-out-quart);
+        }
+
+        .submit-btn:hover {
+            background: var(--color-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .submit-btn .btn-text {
+            transition: opacity 0.2s ease;
+        }
+
+        .submit-btn.loading .btn-text {
+            opacity: 0;
+        }
+
+        .submit-btn .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .submit-btn.loading .spinner {
+            opacity: 1;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ===== Divider ===== */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 32px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--color-border);
+        }
+
+        .divider span {
+            font-size: 13px;
+            color: var(--color-text-muted);
+        }
+
+        /* ===== Footer ===== */
+        .form-footer {
+            text-align: center;
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .form-footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== Alert ===== */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            margin-bottom: 24px;
+            display: none;
+            animation: slideDown 0.3s var(--ease-out-expo);
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert.error {
+            display: block;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert.success {
+            display: block;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            .brand-panel {
+                display: none;
+            }
+            .form-panel {
+                padding: 40px 24px;
+            }
+            .form-wrapper {
+                max-width: 100%;
+            }
+        }
+
+        /* ===== Focus Visible ===== */
+        *:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        /* ===== Reduced Motion ===== */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Left: Brand Panel -->
+        <div class="brand-panel">
+            <div class="brand-content">
+                <div class="brand-logo">贝</div>
+                <h1 class="brand-title">贝优</h1>
+                <p class="brand-subtitle">ADMISSION SYSTEM</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">
+                            <strong>智能数据采集</strong>
+                            <span>自动抓取微信公众号录取喜报</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎓</div>
+                        <div class="feature-text">
+                            <strong>海量录取数据</strong>
+                            <span>覆盖全球主要留学目的地</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📈</div>
+                        <div class="feature-text">
+                            <strong>多维度分析</strong>
+                            <span>国家、大学、专业全方位统计</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Login Form -->
+        <div class="form-panel">
+            <div class="form-wrapper">
+                <div class="form-header">
+                    <h1>欢迎回来</h1>
+                    <p>登录您的贝优账号以继续</p>
+                </div>
+
+                <div id="alert" class="alert"></div>
+
+                <form id="loginForm" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="username">用户名 / 邮箱</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="username" 
+                                class="form-input" 
+                                placeholder="请输入用户名或邮箱"
+                                autocomplete="username"
+                                required
+                            >
+                            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div class="error-message" id="usernameError">请输入用户名</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">密码</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                class="form-input" 
+                                placeholder="请输入密码"
+                                autocomplete="current-password"
+                                required
+                            >
+                            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <button type="button" class="password-toggle" id="togglePassword" aria-label="显示密码">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="error-message" id="passwordError">请输入密码</div>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox" id="remember">
+                            <span>记住我</span>
+                        </label>
+                        <a href="#" class="forgot-link">忘记密码？</a>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <span class="btn-text">登 录</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+
+                <div class="divider">
+                    <span>或者</span>
+                </div>
+
+                <div class="form-footer">
+                    还没有账号？<a href="/register" id="registerLink">立即注册</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== DOM Elements =====
+        const form = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const submitBtn = document.getElementById('submitBtn');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const alert = document.getElementById('alert');
+
+        // ===== Password Toggle =====
+        togglePassword.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.innerHTML = isPassword 
+                ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>'
+                : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+        });
+
+        // ===== Form Validation =====
+        function showError(inputId, messageId, message) {
+            document.getElementById(inputId).classList.add('error');
+            const errorEl = document.getElementById(messageId);
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+
+        function clearError(inputId, messageId) {
+            document.getElementById(inputId).classList.remove('error');
+            document.getElementById(messageId).classList.remove('visible');
+        }
+
+        function showAlert(message, type) {
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+        }
+
+        function hideAlert() {
+            alert.className = 'alert';
+        }
+
+        // Clear errors on input
+        usernameInput.addEventListener('input', () => clearError('username', 'usernameError'));
+        passwordInput.addEventListener('input', () => clearError('password', 'passwordError'));
+
+        // ===== Form Submit =====
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            let valid = true;
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username) {
+                showError('username', 'usernameError', '请输入用户名');
+                valid = false;
+            }
+
+            if (!password) {
+                showError('password', 'passwordError', '请输入密码');
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            // Loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        remember: document.getElementById('remember').checked
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showAlert('登录成功，正在跳转...', 'success');
+                    // Store token
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user_info', JSON.stringify(data.user));
+                    
+                    // Redirect to admin page
+                    setTimeout(() => {
+                        window.location.href = '/admin';
+                    }, 1000);
+                } else {
+                    showAlert(data.message || '登录失败，请检查用户名和密码', 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误，请稍后重试', 'error');
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ===== Enter Key Submit =====
+        [usernameInput, passwordInput].forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+
+        // ===== Check if already logged in =====
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                // Validate token
+                fetch('/api/auth/verify', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        window.location.href = '/admin';
+                    }
+                })
+                .catch(() => {});
+            }
+        });
+    </script>
+</body>
+</html>

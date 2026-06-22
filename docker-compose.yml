@@ -1,0 +1,106 @@
+# 完成时间：2026-03-19 01:00 UTC
+# 大学录取信息整理系统 - Docker Compose 配置
+# 单端口部署方案（仅暴露 80 端口）
+
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: admission-system-app
+    restart: unless-stopped
+    
+    # 单端口映射：仅暴露 80 端口
+    ports:
+      - "80:8000"
+    
+    # 环境变量
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./data/admission_system.db
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - TZ=Asia/Shanghai
+    
+    # 数据持久化
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    
+    # 依赖服务
+    depends_on:
+      redis:
+        condition: service_healthy
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # 网络配置
+    networks:
+      - admission-network
+
+  # Redis 缓存服务（内网，不暴露端口）
+  redis:
+    image: redis:7-alpine
+    container_name: admission-system-redis
+    restart: unless-stopped
+    
+    # 不暴露端口，仅内网访问
+    expose:
+      - "6379"
+    
+    # 数据持久化
+    volumes:
+      - redis_data:/data
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    
+    # 网络配置
+    networks:
+      - admission-network
+    
+    # Redis 配置
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+# 数据卷
+volumes:
+  redis_data:
+    driver: local
+
+# 网络配置
+networks:
+  admission-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

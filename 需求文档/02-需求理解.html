@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>需求理解与分析 - 大学录取信息整理系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 32px; margin-bottom: 10px; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; }
+        .section h2 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; margin-bottom: 20px; font-size: 24px; }
+        .section h3 { color: #1557b0; margin: 25px 0 15px; font-size: 20px; }
+        .content p { line-height: 2; color: #333; margin-bottom: 15px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 15px 0; border-left: 5px solid #1a73e8; }
+        .card h4 { color: #1a73e8; margin-bottom: 10px; }
+        .card p { margin: 5px 0; color: #333; }
+        .highlight { background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; margin: 20px 0; }
+        .highlight p { margin: 5px 0; color: #856404; }
+        .info-box { background: #e8f0fe; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .info-box p { margin: 5px 0; color: #1a73e8; }
+        .success-box { background: #d4edda; padding: 20px; border-radius: 10px; border-left: 5px solid #28a745; margin: 20px 0; }
+        .success-box p { margin: 5px 0; color: #155724; }
+        ul, ol { margin-left: 30px; line-height: 2; color: #333; }
+        li { margin-bottom: 10px; }
+        .footer { background: #f8f9fa; padding: 30px 40px; text-align: center; border-top: 1px solid #e0e0e0; }
+        .footer p { color: #666; font-size: 14px; margin: 5px 0; }
+        .meta-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .meta-info p { margin: 5px 15px; color: #666; font-size: 14px; }
+        .tag { display: inline-block; background: #1a73e8; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; margin-right: 10px; }
+        .tag.success { background: #28a745; }
+        .tag.warning { background: #ffc107; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #1a73e8; color: white; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .flow-chart { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center; }
+        .flow-step { display: inline-block; background: #1a73e8; color: white; padding: 15px 30px; border-radius: 8px; margin: 10px; }
+        .flow-arrow { font-size: 24px; color: #1a73e8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 需求理解与分析</h1>
+            <p>大学录取信息整理系统</p>
+        </div>
+
+        <div class="content">
+            <div class="meta-info">
+                <p><strong>文档类型：</strong> <span class="tag">需求分析</span></p>
+                <p><strong>创建时间：</strong> 2026 年 3 月 18 日 22:38</p>
+                <p><strong>分析人：</strong> 909 运营助理</p>
+                <p><strong>状态：</strong> <span class="tag success">已完成</span></p>
+            </div>
+
+            <div class="section">
+                <h2>1. 项目概述</h2>
+                <div class="card">
+                    <h4>🎯 核心目标</h4>
+                    <p>建立一套完整的大学录取信息管理系统，从微信公众号文章自动采集各国际学校的录取喜报，提取结构化数据，提供查询、统计、导出等功能。</p>
+                </div>
+                <div class="highlight">
+                    <p><strong>关键价值：</strong> 将分散在各学校公众号的录取信息集中管理，形成可查询、可统计、可分析的数据库，为升学指导提供数据支持。</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2. 用户角色分析</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>角色</th>
+                            <th>职责</th>
+                            <th>核心需求</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>系统管理员</strong></td>
+                            <td>系统维护、用户管理</td>
+                            <td>任务队列管理、系统监控、权限控制</td>
+                        </tr>
+                        <tr>
+                            <td><strong>升学指导老师</strong></td>
+                            <td>数据查询、统计分析</td>
+                            <td>按大学/国家/专业查询录取情况、生成统计报表</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据采集员</strong></td>
+                            <td>添加采集任务、审核数据</td>
+                            <td>批量导入链接、监控采集进度、审核提取结果</td>
+                        </tr>
+                        <tr>
+                            <td><strong>学校领导</strong></td>
+                            <td>查看统计报告</td>
+                            <td>年度升学报告、录取趋势分析、对比分析</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>3. 核心功能模块</h2>
+                
+                <h3>3.1 数据采集模块</h3>
+                <div class="card">
+                    <h4>📥 功能描述</h4>
+                    <p>负责从微信文章链接中提取录取信息，包括文章抓取、内容解析、数据提取、数据验证等环节。</p>
+                    <h4>关键特性</h4>
+                    <ul>
+                        <li>支持微信文章链接批量导入（Excel/手动）</li>
+                        <li>OpenClaw 自动抓取和解析</li>
+                        <li>智能提取学生、大学、专业、奖学金等信息</li>
+                        <li>数据验证和去重</li>
+                        <li>支持人工审核和补充</li>
+                    </ul>
+                </div>
+
+                <h3>3.2 任务队列模块</h3>
+                <div class="card">
+                    <h4>⚙️ 功能描述</h4>
+                    <p>管理采集任务队列，支持 1000+ 任务的调度和执行。</p>
+                    <h4>关键特性</h4>
+                    <ul>
+                        <li>任务优先级管理（1-10 级）</li>
+                        <li>并发控制（可配置并发数）</li>
+                        <li>失败自动重试（指数退避）</li>
+                        <li>定时任务调度</li>
+                        <li>实时进度监控</li>
+                        <li>任务状态追踪（待处理/处理中/完成/失败）</li>
+                    </ul>
+                </div>
+
+                <h3>3.3 数据存储模块</h3>
+                <div class="card">
+                    <h4>💾 功能描述</h4>
+                    <p>结构化存储录取信息，支持高效查询和统计。</p>
+                    <h4>核心数据表</h4>
+                    <ul>
+                        <li><strong>admission_records</strong> - 录取记录表（核心）</li>
+                        <li><strong>collection_tasks</strong> - 采集任务队列表</li>
+                        <li><strong>universities</strong> - 大学信息表</li>
+                        <li><strong>countries</strong> - 国家/地区表</li>
+                        <li><strong>source_schools</strong> - 来源学校表</li>
+                        <li><strong>admission_requirements</strong> - 录取条件详情表</li>
+                        <li><strong>statistics_daily</strong> - 每日统计表</li>
+                    </ul>
+                </div>
+
+                <h3>3.4 管理后台模块</h3>
+                <div class="card">
+                    <h4>🖥️ 功能描述</h4>
+                    <p>Web 界面进行数据查询、统计、导出和系统管理。</p>
+                    <h4>核心页面</h4>
+                    <ul>
+                        <li><strong>仪表盘</strong> - 总体统计、实时数据</li>
+                        <li><strong>采集队列</strong> - 任务列表、进度监控</li>
+                        <li><strong>录取数据</strong> - 数据查询、编辑、审核</li>
+                        <li><strong>统计分析</strong> - 多维度统计图表</li>
+                        <li><strong>数据导出</strong> - Excel/CSV/PDF导出</li>
+                        <li><strong>系统设置</strong> - 用户、权限、配置</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>4. 数据模型设计</h2>
+                
+                <h3>4.1 核心字段（录取记录表）</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>分类</th>
+                            <th>字段</th>
+                            <th>必填</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="3"><strong>学生信息</strong></td>
+                            <td>student_name_cn</td>
+                            <td>✅</td>
+                            <td>学生姓名（中文）</td>
+                        </tr>
+                        <tr>
+                            <td>student_name_en</td>
+                            <td>❌</td>
+                            <td>学生姓名（英文）</td>
+                        </tr>
+                        <tr>
+                            <td>student_grade</td>
+                            <td>❌</td>
+                            <td>学生年级（如 2026 届）</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="4"><strong>大学信息</strong></td>
+                            <td>country</td>
+                            <td>✅</td>
+                            <td>国家/地区</td>
+                        </tr>
+                        <tr>
+                            <td>university_cn</td>
+                            <td>✅</td>
+                            <td>大学名称（中文）</td>
+                        </tr>
+                        <tr>
+                            <td>university_en</td>
+                            <td>❌</td>
+                            <td>大学名称（英文）</td>
+                        </tr>
+                        <tr>
+                            <td>university_ranking</td>
+                            <td>❌</td>
+                            <td>大学排名</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>专业信息</strong></td>
+                            <td>major_cn</td>
+                            <td>❌</td>
+                            <td>专业名称（中文）</td>
+                        </tr>
+                        <tr>
+                            <td>major_en</td>
+                            <td>❌</td>
+                            <td>专业名称（英文）</td>
+                        </tr>
+                        <tr>
+                            <td>major_category</td>
+                            <td>❌</td>
+                            <td>专业类别</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="5"><strong>录取信息</strong></td>
+                            <td>admission_type</td>
+                            <td>❌</td>
+                            <td>录取类型（Early/Regular）</td>
+                        </tr>
+                        <tr>
+                            <td>admission_status</td>
+                            <td>❌</td>
+                            <td>录取状态（Offer/Waitlist）</td>
+                        </tr>
+                        <tr>
+                            <td>conditional_offer</td>
+                            <td>❌</td>
+                            <td>是否条件录取</td>
+                        </tr>
+                        <tr>
+                            <td>admission_date</td>
+                            <td>❌</td>
+                            <td>录取日期</td>
+                        </tr>
+                        <tr>
+                            <td>admission_year</td>
+                            <td>✅</td>
+                            <td>录取年份</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="4"><strong>语言要求</strong></td>
+                            <td>language_requirement_type</td>
+                            <td>❌</td>
+                            <td>语言考试类型</td>
+                        </tr>
+                        <tr>
+                            <td>language_score_required</td>
+                            <td>❌</td>
+                            <td>语言分数要求</td>
+                        </tr>
+                        <tr>
+                            <td>language_score_actual</td>
+                            <td>❌</td>
+                            <td>实际语言分数</td>
+                        </tr>
+                        <tr>
+                            <td>language_waived</td>
+                            <td>❌</td>
+                            <td>是否豁免语言</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>奖学金</strong></td>
+                            <td>scholarship_amount</td>
+                            <td>❌</td>
+                            <td>奖学金金额</td>
+                        </tr>
+                        <tr>
+                            <td>scholarship_currency</td>
+                            <td>❌</td>
+                            <td>货币单位</td>
+                        </tr>
+                        <tr>
+                            <td>scholarship_type</td>
+                            <td>❌</td>
+                            <td>奖学金类型</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>来源信息</strong></td>
+                            <td>source_school</td>
+                            <td>✅</td>
+                            <td>来源学校</td>
+                        </tr>
+                        <tr>
+                            <td>article_url</td>
+                            <td>✅</td>
+                            <td>文章链接</td>
+                        </tr>
+                        <tr>
+                            <td>article_title</td>
+                            <td>❌</td>
+                            <td>文章标题</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>5. 工作流程</h2>
+                <div class="flow-chart">
+                    <div class="flow-step">1. 添加采集任务</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">2. 任务进入队列</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">3. OpenClaw 采集</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">4. 数据提取</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">5. 写入数据库</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">6. 更新统计</div>
+                </div>
+                <div class="success-box">
+                    <p><strong>流程说明：</strong></p>
+                    <p>1. 用户通过管理后台批量导入微信文章链接到采集队列</p>
+                    <p>2. 系统为每个链接创建采集任务，设置优先级和状态</p>
+                    <p>3. OpenClaw 从队列获取任务，抓取微信文章内容</p>
+                    <p>4. AI 解析文章，提取学生、大学、专业等结构化信息</p>
+                    <p>5. 验证数据完整性，去重后写入数据库</p>
+                    <p>6. 更新任务状态，触发统计数据更新</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>6. 技术选型</h2>
+                <div class="card">
+                    <h4>🔧 推荐技术栈</h4>
+                    <table>
+                        <tr>
+                            <td><strong>后端框架</strong></td>
+                            <td>FastAPI + Python 3.11+</td>
+                        </tr>
+                        <tr>
+                            <td><strong>任务队列</strong></td>
+                            <td>Redis + RQ / Celery</td>
+                        </tr>
+                        <tr>
+                            <td><strong>数据库</strong></td>
+                            <td>MySQL 8.0+</td>
+                        </tr>
+                        <tr>
+                            <td><strong>前端框架</strong></td>
+                            <td>Vue 3 + Element Plus</td>
+                        </tr>
+                        <tr>
+                            <td><strong>实时推送</strong></td>
+                            <td>WebSocket</td>
+                        </tr>
+                        <tr>
+                            <td><strong>部署</strong></td>
+                            <td>Docker + Docker Compose</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>7. 开发计划</h2>
+                <div class="info-box">
+                    <p><strong>开发模式：</strong> <span style="background: #28a745; color: white; padding: 3px 10px; border-radius: 10px; font-size: 12px;">AI 团队并行开发</span></p>
+                    <p><strong>Agent 1：</strong> 数据库开发（建表、初始化、测试数据）</p>
+                    <p><strong>Agent 2：</strong> 后端 API 开发（FastAPI 框架、接口实现）</p>
+                    <p><strong>Agent 3：</strong> OpenClaw 集成（采集器、提取器、队列）</p>
+                    <p><strong>Agent 4：</strong> 前端开发（管理后台界面、图表）</p>
+                    <p><strong>Agent 5：</strong> 测试部署（单元测试、Docker 配置、文档）</p>
+                </div>
+                <div class="highlight">
+                    <p><strong>总开发周期：</strong> 2-3 小时 ⚡（AI 并行开发）</p>
+                    <p><strong>里程碑：</strong> 1 小时完成核心功能，3 小时全功能上线</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>8. 风险与注意事项</h2>
+                <div class="card">
+                    <h4>⚠️ 技术风险</h4>
+                    <ul>
+                        <li>微信文章反爬机制可能导致采集失败</li>
+                        <li>文章格式不统一影响提取准确率</li>
+                        <li>大量并发任务可能影响系统性能</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>🛡️ 应对措施</h4>
+                    <ul>
+                        <li>实现智能重试和失败降级机制</li>
+                        <li>建立人工审核和补充流程</li>
+                        <li>采用异步任务队列和限流策略</li>
+                        <li>定期备份数据库，建立恢复机制</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>9. 成功标准</h2>
+                <div class="success-box">
+                    <p>✅ 支持 1000+ 采集任务队列管理</p>
+                    <p>✅ OpenClaw 自动提取准确率达到 85% 以上</p>
+                    <p>✅ 管理后台查询响应时间小于 2 秒</p>
+                    <p>✅ 支持按国家、大学、专业等多维度统计</p>
+                    <p>✅ 提供完整的数据导出功能</p>
+                    <p>✅ 系统稳定运行，可用性达到 99%</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>文档版本：</strong> v1.0</p>
+            <p><strong>创建时间：</strong> 2026 年 3 月 18 日 22:38</p>
+            <p><strong>文档路径：</strong> 大学录取信息整理系统/需求文档/02-需求理解.html</p>
+            <p style="margin-top: 15px; color: #999; font-size: 12px;">本文档基于原始需求进行分析，后续如有变更请更新版本。</p>
+        </div>
+    </div>
+</body>
+</html>

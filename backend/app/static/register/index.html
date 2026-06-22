@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>贝优 - 注册</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #4f46e5;
+            --color-primary-light: #818cf8;
+            --color-primary-dark: #3730a3;
+            --color-primary-bg: #eef2ff;
+            --color-surface: #ffffff;
+            --color-bg: #f8fafc;
+            --color-text: #0f172a;
+            --color-text-secondary: #64748b;
+            --color-text-muted: #94a3b8;
+            --color-border: #e2e8f0;
+            --color-error: #ef4444;
+            --color-success: #22c55e;
+            --feishu: #3370FF;
+            --wechat: #07C160;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(5deg); }
+            66% { transform: translate(-20px, 20px) rotate(-3deg); }
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: white;
+            animation: slideUp 0.8s var(--ease-out-expo) both;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Instrument Serif', serif;
+            font-size: 36px;
+            font-weight: 700;
+            margin: 0 auto 32px;
+            backdrop-filter: blur(10px);
+        }
+        .brand-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 400;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+        .brand-subtitle {
+            font-size: 18px;
+            opacity: 0.85;
+            font-weight: 300;
+            margin-bottom: 48px;
+        }
+        .brand-features {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            text-align: left;
+            max-width: 320px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s var(--ease-out-quart), background 0.3s ease;
+            animation: slideUp 0.8s var(--ease-out-expo) both;
+        }
+        .feature-item:nth-child(1) { animation-delay: 0.1s; }
+        .feature-item:nth-child(2) { animation-delay: 0.2s; }
+        .feature-item:nth-child(3) { animation-delay: 0.3s; }
+        .feature-item:hover {
+            transform: translateX(8px);
+            background: rgba(255,255,255,0.15);
+        }
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+        }
+        .feature-text {
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: left;
+        }
+        .feature-text strong {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .feature-text span {
+            opacity: 0.8;
+            font-size: 13px;
+        }
+
+        .form-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+            background: var(--color-surface);
+            position: relative;
+        }
+        .form-wrapper {
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.8s var(--ease-out-expo) 0.2s both;
+        }
+        .form-header {
+            margin-bottom: 32px;
+        }
+        .form-header h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 28px;
+            font-weight: 400;
+            margin-bottom: 8px;
+            color: var(--color-text);
+        }
+        .form-header p {
+            color: var(--color-text-secondary);
+            font-size: 15px;
+        }
+
+        /* ===== Tab Switcher ===== */
+        .tab-switcher {
+            display: flex;
+            background: var(--color-bg);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .tab-switcher .tab-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: transparent;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: color 0.2s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .tab-switcher .tab-btn.active {
+            color: var(--color-text);
+            background: var(--color-surface);
+            box-shadow: var(--shadow-md);
+        }
+        .tab-switcher .tab-btn:not(.active):hover {
+            color: var(--color-text);
+        }
+
+        /* ===== Form Elements ===== */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .form-input {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            border: 1.5px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-family: inherit;
+            color: var(--color-text);
+            background: var(--color-surface);
+            transition: all 0.2s var(--ease-out-quart);
+            outline: none;
+        }
+        .form-input::placeholder {
+            color: var(--color-text-muted);
+        }
+        .form-input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 4px var(--color-primary-bg);
+        }
+        .form-input.error {
+            border-color: var(--color-error);
+            box-shadow: 0 0 0 4px rgba(239,68,68,0.1);
+        }
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+            pointer-events: none;
+            transition: color 0.2s ease;
+        }
+        .form-input:focus ~ .input-icon {
+            color: var(--color-primary);
+        }
+
+        .error-message {
+            font-size: 13px;
+            color: var(--color-error);
+            margin-top: 8px;
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .error-message.visible {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s var(--ease-out-quart);
+            margin-top: 8px;
+        }
+        .submit-btn:hover {
+            background: var(--color-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+        .submit-btn:active { transform: translateY(0); }
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .submit-btn .btn-text { transition: opacity 0.2s ease; }
+        .submit-btn.loading .btn-text { opacity: 0; }
+        .submit-btn .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .submit-btn.loading .spinner {
+            opacity: 1;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ===== Social Buttons ===== */
+        .social-section {
+            margin-top: 28px;
+        }
+        .social-section .divider-text {
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 13px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .social-section .divider-text::before,
+        .social-section .divider-text::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 35%;
+            height: 1px;
+            background: var(--color-border);
+        }
+        .social-section .divider-text::before { left: 0; }
+        .social-section .divider-text::after { right: 0; }
+
+        .social-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .social-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border: 1.5px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-surface);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            color: var(--color-text);
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out-quart);
+        }
+        .social-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        .social-btn.feishu:hover {
+            border-color: var(--feishu);
+            background: rgba(51, 112, 255, 0.04);
+        }
+        .social-btn.wechat:hover {
+            border-color: var(--wechat);
+            background: rgba(7, 193, 96, 0.04);
+        }
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* ===== Alert ===== */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            margin-bottom: 24px;
+            display: none;
+            animation: slideDown 0.3s var(--ease-out-expo);
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .alert.error {
+            display: block;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .alert.success {
+            display: block;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* ===== Form Footer ===== */
+        .form-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+        .form-footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== Tab Content ===== */
+        .tab-content {
+            display: none;
+            animation: fadeUp 0.4s var(--ease-out-expo);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            .brand-panel { display: none; }
+            .form-panel { padding: 40px 24px; }
+            .form-wrapper { max-width: 100%; }
+            .social-buttons { flex-direction: column; }
+        }
+        *:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Left: Brand Panel -->
+        <div class="brand-panel">
+            <div class="brand-content">
+                <div class="brand-logo">贝</div>
+                <h1 class="brand-title">贝优</h1>
+                <p class="brand-subtitle">ADMISSION SYSTEM</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">
+                            <strong>智能数据采集</strong>
+                            <span>自动抓取微信公众号录取喜报</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🎓</div>
+                        <div class="feature-text">
+                            <strong>海量录取数据</strong>
+                            <span>覆盖全球主要留学目的地</span>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📈</div>
+                        <div class="feature-text">
+                            <strong>多维度分析</strong>
+                            <span>国家、大学、专业全方位统计</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Register Form -->
+        <div class="form-panel">
+            <div class="form-wrapper">
+                <div class="form-header">
+                    <h1>创建账号</h1>
+                    <p>注册贝优账号，开启智能数据管理</p>
+                </div>
+
+                <div id="alert" class="alert"></div>
+
+                <!-- Tab Switcher -->
+                <div class="tab-switcher">
+                    <button class="tab-btn active" data-tab="account" onclick="switchTab('account')">账号注册</button>
+                    <button class="tab-btn" data-tab="social" onclick="switchTab('social')">第三方注册</button>
+                </div>
+
+                <!-- Tab 1: Account Registration -->
+                <div id="tab-account" class="tab-content active">
+                    <form id="registerForm" novalidate>
+                        <div class="form-group">
+                            <label class="form-label" for="username">用户名</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="username" class="form-input" placeholder="请设置用户名（至少3个字符）" required>
+                                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                            <div class="error-message" id="usernameError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="email">邮箱（可选）</label>
+                            <div class="input-wrapper">
+                                <input type="email" id="email" class="form-input" placeholder="请输入邮箱地址">
+                                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                            </div>
+                            <div class="error-message" id="emailError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="password">密码</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="password" class="form-input" placeholder="请设置密码（至少6个字符）" required>
+                                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                                <button type="button" class="password-toggle" onclick="togglePassword('password', this)" aria-label="显示密码" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-text-muted);cursor:pointer;padding:4px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="error-message" id="passwordError"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="confirmPassword">确认密码</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="confirmPassword" class="form-input" placeholder="请再次输入密码" required>
+                                <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            </div>
+                            <div class="error-message" id="confirmPasswordError"></div>
+                        </div>
+
+                        <button type="submit" class="submit-btn" id="submitBtn">
+                            <span class="btn-text">注 册</span>
+                            <div class="spinner"></div>
+                        </button>
+                    </form>
+
+                    <div class="social-section">
+                        <div class="divider-text">或者使用第三方账号注册</div>
+                        <div class="social-buttons">
+                            <button class="social-btn feishu" onclick="socialRegister('feishu')">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#3370FF"/>
+                                    <path d="M12 6l-1.5 3h-3l2.25 2.25L8.5 14.5h3L12 12l1.5 2.5h3l-1.25-3.25L16.5 9h-3L12 6z" fill="white"/>
+                                </svg>
+                                飞书注册
+                            </button>
+                            <button class="social-btn wechat" onclick="socialRegister('wechat')">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#07C160"/>
+                                    <path d="M8.5 13.5l-1-2h-2l2-2-2-2h2l1-2 1 2h2l-2 2 2 2h-2l-1 2zm7 0l-1-2h-2l2-2-2-2h2l1-2 1 2h2l-2 2 2 2h-2l-1 2z" fill="white"/>
+                                </svg>
+                                微信注册
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Social Registration -->
+                <div id="tab-social" class="tab-content">
+                    <div style="text-align:center;padding:20px 0 32px;">
+                        <p style="color:var(--color-text-secondary);font-size:14px;margin-bottom:28px;">选择第三方平台快速注册</p>
+                        <div class="social-buttons" style="flex-direction:column;gap:16px;max-width:280px;margin:0 auto;">
+                            <button class="social-btn feishu" onclick="socialRegister('feishu')" style="padding:16px;font-size:15px;">
+                                <svg viewBox="0 0 24 24" fill="none" style="width:24px;height:24px;">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#3370FF"/>
+                                    <path d="M12 6l-1.5 3h-3l2.25 2.25L8.5 14.5h3L12 12l1.5 2.5h3l-1.25-3.25L16.5 9h-3L12 6z" fill="white"/>
+                                </svg>
+                                飞书账号注册
+                            </button>
+                            <button class="social-btn wechat" onclick="socialRegister('wechat')" style="padding:16px;font-size:15px;">
+                                <svg viewBox="0 0 24 24" fill="none" style="width:24px;height:24px;">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#07C160"/>
+                                    <path d="M8.5 13.5l-1-2h-2l2-2-2-2h2l1-2 1 2h2l-2 2 2 2h-2l-1 2zm7 0l-1-2h-2l2-2-2-2h2l1-2 1 2h2l-2 2 2 2h-2l-1 2z" fill="white"/>
+                                </svg>
+                                微信账号注册
+                            </button>
+                        </div>
+                        <p style="color:var(--color-text-muted);font-size:12px;margin-top:24px;">注册后默认成为普通用户，可浏览录取数据</p>
+                    </div>
+                </div>
+
+                <div class="form-footer">
+                    已有账号？<a href="/login">返回登录</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Tab Switching =====
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            hideAlert();
+        }
+
+        // ===== Password Toggle =====
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+        }
+
+        // ===== Alert =====
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+        }
+        function hideAlert() {
+            const alert = document.getElementById('alert');
+            alert.className = 'alert';
+        }
+
+        // ===== Form Validation =====
+        function showError(inputId, messageId, message) {
+            document.getElementById(inputId).classList.add('error');
+            const errorEl = document.getElementById(messageId);
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+        function clearError(inputId, messageId) {
+            document.getElementById(inputId).classList.remove('error');
+            document.getElementById(messageId).classList.remove('visible');
+        }
+
+        // Clear errors on input
+        ['username', 'email', 'password', 'confirmPassword'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => clearError(id, id + 'Error'));
+        });
+
+        // ===== Register Form Submit =====
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
+
+            let valid = true;
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!username || username.length < 3) {
+                showError('username', 'usernameError', '用户名至少需要3个字符');
+                valid = false;
+            }
+
+            if (email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showError('email', 'emailError', '请输入有效的邮箱地址');
+                    valid = false;
+                }
+            }
+
+            if (!password || password.length < 6) {
+                showError('password', 'passwordError', '密码至少需要6个字符');
+                valid = false;
+            }
+
+            if (password !== confirmPassword) {
+                showError('confirmPassword', 'confirmPasswordError', '两次输入的密码不一致');
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email: email || null, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showAlert('注册成功！正在跳转到登录页面...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                } else {
+                    showAlert(data.detail || data.message || '注册失败，请重试', 'error');
+                }
+            } catch (error) {
+                showAlert('网络错误，请稍后重试', 'error');
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // ===== Social Register =====
+        function socialRegister(platform) {
+            if (platform === 'feishu') {
+                showAlert('飞书注册功能即将上线，敬请期待！', 'error');
+                // TODO: 跳转飞书 OAuth: window.location.href = '/api/auth/feishu/oauth'
+            } else if (platform === 'wechat') {
+                showAlert('微信注册功能即将上线，敬请期待！', 'error');
+                // TODO: 跳转微信 OAuth: window.location.href = '/api/auth/wechat/oauth'
+            }
+        }
+    </script>
+</body>
+</html>
